@@ -1,0 +1,11 @@
+# Copie para terraform.tfvars (ignorado pelo git) e preencha.
+
+projeto_id         = "svv-dev-1234"
+regiao             = "us-east1"
+bucket_estado_nome = "svv-dev-1234-tfstate"
+
+# Orçamento mensal (recomendado). Obtenha o ID com `gcloud billing accounts list`.
+orcamento_habilitado = true
+conta_faturamento_id = "XXXXXX-XXXXXX-XXXXXX"
+orcamento_valor      = 100
+orcamento_moeda      = "BRL"

@@ -1,0 +1,14 @@
+# Versões fixadas do toolchain, gerenciadas pelo mise (https://mise.jdx.dev).
+# Instalação: docs/operacao/configuracao-ambiente.md
+#
+# Flutter NÃO é gerenciado aqui: usa FVM, com a versão em aplicativo/.fvmrc.
+# gcloud NÃO é gerenciado aqui: instalado via apt (repositório oficial do Google).
+#
+# Ao atualizar uma versão, registrar em docs/adr/0008-toolchain-mise-fvm.md
+# e conferir a compatibilidade com o runtime das Cloud Run functions (Go).
+
+[tools]
+# Runtime go127 (GA) nas Cloud Run functions. Verificado em 2026-09-16.
+go = "1.27.1"
+# Verificado em 2026-09-16 (última versão estável).
+terraform = "1.16.3"
