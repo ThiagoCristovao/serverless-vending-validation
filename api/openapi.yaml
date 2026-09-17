@@ -1,0 +1,633 @@
+openapi: 3.1.0
+
+info:
+  title: Serviço de Validação de Máquinas de Vending (SVV)
+  version: 0.1.0
+  summary: Validação remota de máquinas de vending offline por operadores de campo.
+  description: |
+    Contrato canônico do serviço de validação (ADR-0006). Usado para documentação, geração de
+    código do servidor (Go) e do cliente (Dart) e como configuração do API Gateway.
+
+    **Autenticação.** Todas as operações exigem um ID token do Firebase Authentication no cabeçalho
+    `Authorization: Bearer <jwt>`. O API Gateway valida assinatura, emissor e audiência e encaminha
+    as claims à função no cabeçalho `X-Apigw-Api-Userinfo`. Requisições sem token válido recebem
+    `401` do gateway, sem chegar ao serviço.
+
+    **Erros.** Seguem a RFC 9457 (`application/problem+json`) com as extensões `codigo` e
+    `idValidacao` (ADR-0009). O cliente decide o que exibir pelo campo `codigo`.
+
+    **Idempotência.** `POST /validacoes` exige o cabeçalho `Idempotency-Key` (UUID por leitura de
+    QR). Repetir a mesma chave com o mesmo corpo devolve a mesma resposta.
+
+    Marcadores `PROJETO_ID` e `URL_DA_FUNCAO` são substituídos pelo Terraform (módulo `gateway`).
+  license:
+    name: GPL-3.0-or-later
+    identifier: GPL-3.0-or-later
+  contact:
+    name: Thiago Cristovão de Souza
+    url: https://github.com/ThiagoCristovao/serverless-vending-validation
+
+servers:
+  - url: https://{gateway}/v1
+    description: API Gateway (us-east1). O host é saída do Terraform.
+    variables:
+      gateway:
+        default: svv-dev-gateway.exemplo.invalid
+        description: Hostname do API Gateway do ambiente.
+
+tags:
+  - name: validacoes
+    description: Ciclo de vida de uma validação, da leitura do QR à conclusão da visita.
+
+security:
+  - firebaseJwt: []
+
+# Roteamento do API Gateway para a Cloud Run function (preenchido pelo Terraform na Sprint 5).
+x-google-backend:
+  address: URL_DA_FUNCAO
+  jwt_audience: URL_DA_FUNCAO
+  path_translation: APPEND_PATH_TO_ADDRESS
+  deadline: 30.0
+
+paths:
+  /validacoes:
+    post:
+      tags: [validacoes]
+      operationId: iniciarValidacao
+      summary: Inicia a validação de uma máquina a partir do payload do QR
+      description: |
+        Verifica assinatura, validade e cadastro; cria a validação com estado `aberta`; deriva a
+        contrassenha corrente e a próxima; persiste e publica `validacao.iniciada`.
+
+        Reenvio com a mesma `Idempotency-Key` e o mesmo corpo devolve `201` com o mesmo conteúdo.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IniciarValidacaoRequisicao'
+            examples:
+              padrao:
+                summary: Leitura de um adesivo válido
+                value:
+                  qr:
+                    v: 1
+                    maq: VM-2047
+                    mod: CN168
+                    loc: BLA-T
+                    exp: '2027-12-31'
+                    kid: k1
+                    sig: 01234567890123456789012345678901234567890123456789012345678901234567890123456789abcdef
+                  lidoEm: '2026-09-17T13:05:10Z'
+                  dispositivo:
+                    plataforma: android
+                    versaoApp: 0.1.0
+      responses:
+        '201':
+          description: Validação criada (ou reproduzida por idempotência).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Validacao'
+              examples:
+                aberta:
+                  $ref: '#/components/examples/ValidacaoAberta'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalida'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '410':
+          $ref: '#/components/responses/Expirado'
+        '422':
+          $ref: '#/components/responses/NaoProcessavel'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/Indisponivel'
+
+  /validacoes/{idValidacao}:
+    parameters:
+      - $ref: '#/components/parameters/IdValidacao'
+    get:
+      tags: [validacoes]
+      operationId: consultarValidacao
+      summary: Consulta o estado de uma validação
+      description: |
+        Usada pelo aplicativo para recuperar o estado após falha de rede (a resposta de uma
+        operação anterior pode ter se perdido). As contrassenhas só são devolvidas enquanto o estado
+        for `aberta`. Apenas o operador que iniciou a validação pode consultá-la.
+      responses:
+        '200':
+          description: Estado atual da validação.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Validacao'
+              examples:
+                concluida:
+                  $ref: '#/components/examples/ValidacaoConcluida'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/Indisponivel'
+
+  /validacoes/{idValidacao}/conclusao:
+    parameters:
+      - $ref: '#/components/parameters/IdValidacao'
+    post:
+      tags: [validacoes]
+      operationId: concluirValidacao
+      summary: Conclui a validação com as leituras operacionais
+      description: |
+        Fecha a validação (`concluida`), grava as leituras, incrementa o contador de rotação da
+        contrassenha quando `codigoRotacionado` é verdadeiro e publica `validacao.concluida`.
+
+        Idempotente: repetir sobre uma validação já concluída com o mesmo corpo devolve `200`;
+        com corpo diferente devolve `409` (`validacao_ja_concluida`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConcluirValidacaoRequisicao'
+            examples:
+              padrao:
+                summary: Leituras informadas e novo código programado
+                value:
+                  leituras:
+                    medidor: 14832
+                    unidadesVendidas: 137
+                  codigoRotacionado: true
+                  observacoes: Bobina 3 travando; solicitar manutenção.
+      responses:
+        '200':
+          description: Validação concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConclusaoResposta'
+              examples:
+                padrao:
+                  value:
+                    idValidacao: 01J8ZK3V9Q7XW2N4M6P8R0T2Y4
+                    status: concluida
+                    concluidaEm: '2026-09-17T13:19:44Z'
+                    codigoRotacionado: true
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalida'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '403':
+          $ref: '#/components/responses/NaoAutorizado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/Conflito'
+        '410':
+          $ref: '#/components/responses/Expirado'
+        '422':
+          $ref: '#/components/responses/NaoProcessavel'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+        '503':
+          $ref: '#/components/responses/Indisponivel'
+
+components:
+  securitySchemes:
+    firebaseJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        ID token emitido pelo Firebase Authentication. Validado pelo API Gateway com as extensões
+        abaixo; a função confia apenas nas claims recebidas em `X-Apigw-Api-Userinfo`.
+      x-google-issuer: https://securetoken.google.com/PROJETO_ID
+      x-google-jwks_uri: https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com
+      x-google-audiences: PROJETO_ID
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID gerado pelo aplicativo a cada leitura de QR. Reenvios usam a mesma chave.
+      schema:
+        type: string
+        format: uuid
+        examples: ['6f1c2a4e-3b7d-4e8f-9a0b-1c2d3e4f5a6b']
+    IdValidacao:
+      name: idValidacao
+      in: path
+      required: true
+      description: Identificador da validação (ULID).
+      schema:
+        $ref: '#/components/schemas/IdValidacao'
+
+  schemas:
+    IdValidacao:
+      type: string
+      description: ULID de 26 caracteres, ordenável por tempo.
+      pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
+      examples: ['01J8ZK3V9Q7XW2N4M6P8R0T2Y4']
+
+    Contrassenha:
+      type: string
+      description: Código supervisor de 4 dígitos, com zeros à esquerda (ADR-0002).
+      pattern: '^[0-9]{4}$'
+      examples: ['4729']
+
+    PayloadQr:
+      type: object
+      description: Conteúdo decodificado do QR fixado na máquina (docs/payload-qr.md).
+      required: [v, maq, mod, loc, exp, kid, sig]
+      additionalProperties: false
+      properties:
+        v:
+          type: integer
+          const: 1
+          description: Versão do esquema do payload.
+        maq:
+          type: string
+          pattern: '^[A-Z0-9-]{3,32}$'
+          description: Identificador único da máquina.
+        mod:
+          type: string
+          enum: [CN168]
+          description: Modelo do equipamento.
+        loc:
+          type: string
+          pattern: '^[A-Z0-9-]{1,32}$'
+          description: Identificador da localização física.
+        exp:
+          type: string
+          format: date
+          description: Último dia de validade do adesivo.
+        kid:
+          type: string
+          pattern: '^[a-z0-9]{1,8}$'
+          description: Identificador da chave pública que valida a assinatura.
+        sig:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{86}$'
+          description: Assinatura Ed25519 dos campos canônicos, em base64url sem preenchimento.
+
+    Dispositivo:
+      type: object
+      description: Metadados do dispositivo, apenas para diagnóstico.
+      additionalProperties: false
+      properties:
+        plataforma:
+          type: string
+          enum: [android, ios]
+        versaoApp:
+          type: string
+          maxLength: 32
+
+    IniciarValidacaoRequisicao:
+      type: object
+      required: [qr]
+      additionalProperties: false
+      properties:
+        qr:
+          $ref: '#/components/schemas/PayloadQr'
+        lidoEm:
+          type: string
+          format: date-time
+          description: Instante da leitura no dispositivo (relógio do dispositivo; informativo).
+        dispositivo:
+          $ref: '#/components/schemas/Dispositivo'
+
+    Localizacao:
+      type: object
+      required: [id, nome]
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+
+    Maquina:
+      type: object
+      description: Dados cadastrais da máquina devolvidos ao operador.
+      required: [id, modelo, localizacao, ultimaValidacaoEm]
+      properties:
+        id:
+          type: string
+        modelo:
+          type: string
+          enum: [CN168]
+        localizacao:
+          $ref: '#/components/schemas/Localizacao'
+        ultimaValidacaoEm:
+          type: [string, 'null']
+          format: date-time
+          description: Instante da última validação concluída, ou nulo se nunca validada.
+
+    Leituras:
+      type: object
+      description: Valores lidos no modo supervisor da máquina.
+      required: [medidor, unidadesVendidas]
+      additionalProperties: false
+      properties:
+        medidor:
+          type: integer
+          minimum: 0
+          description: Valor do medidor interno (vendas totais acumuladas).
+        unidadesVendidas:
+          type: integer
+          minimum: 0
+          description: Unidades vendidas desde a última coleta.
+
+    Validacao:
+      type: object
+      description: |
+        Estado de uma validação. `contrassenha` e `proximaContrassenha` só estão presentes enquanto
+        `status` for `aberta`.
+      required: [idValidacao, status, iniciadaEm, expiraEm, maquina]
+      properties:
+        idValidacao:
+          $ref: '#/components/schemas/IdValidacao'
+        status:
+          type: string
+          enum: [aberta, concluida, expirada]
+        contrassenha:
+          $ref: '#/components/schemas/Contrassenha'
+        proximaContrassenha:
+          $ref: '#/components/schemas/Contrassenha'
+        iniciadaEm:
+          type: string
+          format: date-time
+        expiraEm:
+          type: string
+          format: date-time
+          description: Prazo para concluir a validação (RN-04).
+        concluidaEm:
+          type: [string, 'null']
+          format: date-time
+        maquina:
+          $ref: '#/components/schemas/Maquina'
+        leituras:
+          $ref: '#/components/schemas/Leituras'
+        codigoRotacionado:
+          type: boolean
+
+    ConcluirValidacaoRequisicao:
+      type: object
+      required: [leituras, codigoRotacionado]
+      additionalProperties: false
+      properties:
+        leituras:
+          $ref: '#/components/schemas/Leituras'
+        codigoRotacionado:
+          type: boolean
+          description: Verdadeiro se o operador programou a próxima contrassenha na máquina.
+        observacoes:
+          type: string
+          maxLength: 500
+
+    ConclusaoResposta:
+      type: object
+      required: [idValidacao, status, concluidaEm, codigoRotacionado]
+      properties:
+        idValidacao:
+          $ref: '#/components/schemas/IdValidacao'
+        status:
+          type: string
+          const: concluida
+        concluidaEm:
+          type: string
+          format: date-time
+        codigoRotacionado:
+          type: boolean
+
+    Problema:
+      type: object
+      description: Erro no formato Problem Details (RFC 9457) com extensões do domínio.
+      required: [type, title, status, codigo]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URN estável do tipo de erro, `urn:svv:erro:<codigo>`.
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          description: Caminho da requisição que gerou o erro.
+        codigo:
+          type: string
+          description: Código estável usado pelo aplicativo para decidir a mensagem e a ação.
+          enum:
+            - payload_invalido
+            - modelo_nao_suportado
+            - qr_expirado
+            - chave_qr_desconhecida
+            - assinatura_invalida
+            - maquina_desconhecida
+            - maquina_inativa
+            - operador_nao_autorizado
+            - validacao_em_andamento
+            - validacao_ja_concluida
+            - validacao_expirada
+            - validacao_nao_encontrada
+            - chave_idempotencia_conflitante
+            - dependencia_indisponivel
+            - erro_interno
+        idValidacao:
+          $ref: '#/components/schemas/IdValidacao'
+
+  examples:
+    ValidacaoAberta:
+      summary: Validação recém-criada
+      value:
+        idValidacao: 01J8ZK3V9Q7XW2N4M6P8R0T2Y4
+        status: aberta
+        contrassenha: '4729'
+        proximaContrassenha: '0318'
+        iniciadaEm: '2026-09-17T13:05:12Z'
+        expiraEm: '2026-09-17T13:20:12Z'
+        concluidaEm: null
+        maquina:
+          id: VM-2047
+          modelo: CN168
+          localizacao:
+            id: BLA-T
+            nome: Bloco A - Térreo
+          ultimaValidacaoEm: '2026-09-03T10:41:00Z'
+    ValidacaoConcluida:
+      summary: Validação já concluída (sem contrassenhas)
+      value:
+        idValidacao: 01J8ZK3V9Q7XW2N4M6P8R0T2Y4
+        status: concluida
+        iniciadaEm: '2026-09-17T13:05:12Z'
+        expiraEm: '2026-09-17T13:20:12Z'
+        concluidaEm: '2026-09-17T13:19:44Z'
+        maquina:
+          id: VM-2047
+          modelo: CN168
+          localizacao:
+            id: BLA-T
+            nome: Bloco A - Térreo
+          ultimaValidacaoEm: '2026-09-17T13:19:44Z'
+        leituras:
+          medidor: 14832
+          unidadesVendidas: 137
+        codigoRotacionado: true
+
+  responses:
+    RequisicaoInvalida:
+      description: Corpo ou cabeçalhos malformados.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            payloadInvalido:
+              value:
+                type: urn:svv:erro:payload_invalido
+                title: Payload inválido
+                status: 400
+                detail: O campo qr.exp não está no formato AAAA-MM-DD.
+                instance: /v1/validacoes
+                codigo: payload_invalido
+    NaoAutenticado:
+      description: Token ausente, inválido ou expirado. Emitido pelo API Gateway.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            semToken:
+              value:
+                type: urn:svv:erro:operador_nao_autorizado
+                title: Não autenticado
+                status: 401
+                detail: Cabeçalho Authorization ausente ou token inválido.
+                instance: /v1/validacoes
+                codigo: operador_nao_autorizado
+    NaoAutorizado:
+      description: Operador inexistente, inativo ou sem permissão sobre o recurso.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            operadorInativo:
+              value:
+                type: urn:svv:erro:operador_nao_autorizado
+                title: Operador não autorizado
+                status: 403
+                detail: O operador está inativo. Procure a administração da rede.
+                instance: /v1/validacoes
+                codigo: operador_nao_autorizado
+    NaoEncontrado:
+      description: Máquina ou validação desconhecida.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            maquinaDesconhecida:
+              value:
+                type: urn:svv:erro:maquina_desconhecida
+                title: Máquina desconhecida
+                status: 404
+                detail: Nenhuma máquina cadastrada com o identificador VM-9999.
+                instance: /v1/validacoes
+                codigo: maquina_desconhecida
+    Conflito:
+      description: Estado atual impede a operação.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            validacaoEmAndamento:
+              value:
+                type: urn:svv:erro:validacao_em_andamento
+                title: Validação em andamento
+                status: 409
+                detail: A máquina VM-2047 já possui uma validação aberta iniciada às 13:05 por outro operador.
+                instance: /v1/validacoes
+                codigo: validacao_em_andamento
+                idValidacao: 01J8ZK3V9Q7XW2N4M6P8R0T2Y4
+    Expirado:
+      description: Adesivo vencido ou validação fora do prazo.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            qrExpirado:
+              value:
+                type: urn:svv:erro:qr_expirado
+                title: Adesivo vencido
+                status: 410
+                detail: O adesivo expirou em 2025-12-31. Solicite a substituição.
+                instance: /v1/validacoes
+                codigo: qr_expirado
+    NaoProcessavel:
+      description: Payload bem formado, mas semanticamente inválido.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            assinaturaInvalida:
+              value:
+                type: urn:svv:erro:assinatura_invalida
+                title: Assinatura inválida
+                status: 422
+                detail: A assinatura do adesivo não corresponde aos campos informados.
+                instance: /v1/validacoes
+                codigo: assinatura_invalida
+    ErroInterno:
+      description: Falha inesperada no serviço.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            erroInterno:
+              value:
+                type: urn:svv:erro:erro_interno
+                title: Erro interno
+                status: 500
+                detail: Falha inesperada. Tente novamente em instantes.
+                instance: /v1/validacoes
+                codigo: erro_interno
+    Indisponivel:
+      description: Dependência (Firestore) indisponível. O cliente pode reenviar com espera exponencial.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            indisponivel:
+              value:
+                type: urn:svv:erro:dependencia_indisponivel
+                title: Serviço temporariamente indisponível
+                status: 503
+                detail: Não foi possível acessar o armazenamento. Tente novamente.
+                instance: /v1/validacoes
+                codigo: dependencia_indisponivel

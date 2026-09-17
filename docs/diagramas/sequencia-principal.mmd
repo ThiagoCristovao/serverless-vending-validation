@@ -1,0 +1,41 @@
+%% Fluxo principal: da autenticação à conclusão da visita (docs/arquitetura.md, seção 3)
+sequenceDiagram
+  autonumber
+  actor Op as Operador
+  participant App as Aplicativo
+  participant Auth as Firebase Auth
+  participant GW as API Gateway
+  participant Fn as Função svv-validacao
+  participant FS as Firestore
+  participant PS as Pub/Sub
+  participant SC as Sistema central (simulado)
+
+  Op->>App: E-mail e senha
+  App->>Auth: signInWithEmailAndPassword
+  Auth-->>App: ID token (JWT, 1 h)
+
+  Op->>App: Aponta a câmera para o QR da máquina
+  App->>App: Valida payload localmente (estrutura, exp, modelo, assinatura*)
+  App->>GW: POST /v1/validacoes (Bearer JWT, Idempotency-Key, payload)
+  GW->>GW: Verifica assinatura, emissor e audiência do JWT
+  GW->>Fn: Encaminha com X-Apigw-Api-Userinfo
+  Fn->>Fn: Verifica assinatura Ed25519, kid, exp, modelo
+  Fn->>FS: Transação: máquina ativa? operador ativo? sem validação aberta? cria validação
+  FS-->>Fn: OK (contadorCodigo = n)
+  Fn->>Fn: contrassenha = HMAC(n), proxima = HMAC(n+1)
+  Fn->>PS: Publica validacao.iniciada
+  Fn-->>GW: 201 {idValidacao, contrassenha, proximaContrassenha, maquina, expiraEm}
+  GW-->>App: 201
+  App-->>Op: Exibe contrassenha, próximo código e dados da máquina
+
+  Op->>Op: Digita o código supervisor na máquina; lê medidor e vendas; programa o próximo código
+  Op->>App: Informa leituras e confirma (codigoRotacionado = true)
+  App->>GW: POST /v1/validacoes/{id}/conclusao (Bearer JWT)
+  GW->>Fn: Encaminha
+  Fn->>FS: Transação: status = concluida; contadorCodigo = n + 1; leituras
+  Fn->>PS: Publica validacao.concluida
+  Fn-->>App: 200 {status: concluida}
+  App-->>Op: Visita concluída
+
+  PS-->>SC: Entrega os eventos (assíncrono, quando disponível)
+  SC->>SC: Idempotência por (idValidacao, tipo); persiste; ack

@@ -1,0 +1,33 @@
+%% Cenários CE-15 e CE-16: sistema central indisponível e mensagem envenenada (docs/arquitetura.md, seção 9)
+sequenceDiagram
+  autonumber
+  participant Fn as Função svv-validacao
+  participant PS as Pub/Sub (svv-validacoes)
+  participant SUB as Assinatura svv-sistema-central
+  participant SC as Sistema central (simulado)
+  participant DLQ as svv-validacoes-dlq
+
+  Note over SC: Sistema central DERRUBADO deliberadamente
+
+  Fn->>PS: validacao.iniciada (V1)
+  Fn->>PS: validacao.concluida (V1)
+  Fn->>PS: validacao.iniciada (V2)
+  Note over Fn: Operadores seguem trabalhando: 201/200 normais
+
+  PS->>SUB: Retém as mensagens (retenção de 7 dias)
+  SUB--xSC: Tentativa de entrega falha
+  SUB->>SUB: Espera exponencial 10 s → 600 s
+
+  Note over SC: Sistema central RESTABELECIDO
+
+  SUB->>SC: Entrega V1.iniciada, V1.concluida, V2.iniciada (ordem por idMaquina)
+  SC->>SC: Verifica (idValidacao, tipo) já processado? Não → persiste
+  SC-->>SUB: ack
+
+  Note over SUB,SC: Mensagem envenenada (ex.: corpo que o consumidor rejeita)
+  SUB->>SC: Entrega M
+  SC-->>SUB: nack
+  SUB->>SC: Tentativas 2..5 com espera
+  SC-->>SUB: nack
+  SUB->>DLQ: Encaminha M após 5 tentativas
+  Note over DLQ: Alerta no Cloud Monitoring; inspeção manual

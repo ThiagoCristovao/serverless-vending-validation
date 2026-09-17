@@ -1,0 +1,9 @@
+{
+  "type": "urn:svv:erro:validacao_em_andamento",
+  "title": "Validação em andamento",
+  "status": 409,
+  "detail": "A máquina VM-2047 já possui uma validação aberta iniciada às 13:05 por outro operador.",
+  "instance": "/v1/validacoes",
+  "codigo": "validacao_em_andamento",
+  "idValidacao": "01J8ZK3V9Q7XW2N4M6P8R0T2Y4"
+}
