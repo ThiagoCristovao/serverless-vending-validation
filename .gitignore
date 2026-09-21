@@ -1,32 +1,98 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# =============================================================================
+# Segredos e credenciais — NUNCA versionar
+# =============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+**/chaves/
+**/*credenciais*.json
+**/*credentials*.json
+**/*-sa.json
+**/*-chave*.json
+application_default_credentials.json
+google-services.json
+GoogleService-Info.plist
+firebase-debug.log
+firebase-debug.*.log
+.firebaserc
+
+# =============================================================================
+# Terraform
+# =============================================================================
+# O arquivo .terraform.lock.hcl DEVE ser versionado (fixa versões dos providers).
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+backend.hcl
+!backend.hcl.example
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# =============================================================================
+# Go
+# =============================================================================
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
-
-# Code coverage profiles and other test artifacts
 *.out
 coverage.*
 *.coverprofile
 profile.cov
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
 go.work
 go.work.sum
+servico/bin/
+sistema-central-simulado/bin/
+ferramentas/**/bin/
+# vendor/  — descomentar se a estratégia de dependências mudar para vendoring
 
-# env file
-.env
+# =============================================================================
+# Dart / Flutter
+# =============================================================================
+**/.dart_tool/
+**/.packages
+**/.pub-cache/
+**/.pub/
+aplicativo/build/
+aplicativo/.flutter-plugins
+aplicativo/.flutter-plugins-dependencies
+aplicativo/.fvm/flutter_sdk
+aplicativo/.fvm/versions/
+aplicativo/android/local.properties
+aplicativo/android/key.properties
+aplicativo/android/.gradle/
+aplicativo/android/**/*.jks
+aplicativo/android/**/*.keystore
+aplicativo/**/GeneratedPluginRegistrant.*
+aplicativo/coverage/
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# =============================================================================
+# Ferramentas, editores e sistema operacional
+# =============================================================================
+.mise.local.toml
+node_modules/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.claude/settings.local.json

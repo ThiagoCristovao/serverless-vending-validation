@@ -1,0 +1,35 @@
+%% Cenários CE-02 e CE-03: resposta perdida por falha de rede no dispositivo (docs/arquitetura.md, seção 9)
+sequenceDiagram
+  autonumber
+  actor Op as Operador
+  participant App as Aplicativo
+  participant GW as API Gateway
+  participant Fn as Função svv-validacao
+  participant FS as Firestore
+
+  Note over App: Chave K gerada na leitura do QR
+  App->>GW: POST /v1/validacoes (Idempotency-Key: K)
+  GW->>Fn: Encaminha
+  Fn->>FS: Cria validação V1 (chaveIdempotencia = K)
+  Fn-->>GW: 201 V1
+  GW--xApp: Resposta perdida (rede móvel caiu)
+  App->>App: Tempo esgotado; espera 1 s
+  App->>GW: Reenvio POST /v1/validacoes (Idempotency-Key: K, mesmo corpo)
+  GW->>Fn: Encaminha
+  Fn->>FS: Busca por chaveIdempotencia = K
+  FS-->>Fn: V1 encontrada, mesmo hash do corpo
+  Fn-->>App: 201 V1 (idêntica; nenhuma validação nova)
+  App-->>Op: Exibe contrassenha
+
+  Note over Op,App: ... operador conclui na máquina ...
+
+  App->>GW: POST /v1/validacoes/V1/conclusao
+  GW->>Fn: Encaminha
+  Fn->>FS: status = concluida; contador += 1
+  Fn-->>GW: 200
+  GW--xApp: Resposta perdida
+  App->>App: Tempo esgotado; antes de reenviar, consulta o estado
+  App->>GW: GET /v1/validacoes/V1
+  GW->>Fn: Encaminha
+  Fn-->>App: 200 {status: concluida}
+  App-->>Op: Visita concluída (sem segunda rotação)

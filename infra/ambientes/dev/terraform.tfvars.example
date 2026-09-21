@@ -1,0 +1,3 @@
+# Copie para terraform.tfvars (ignorado pelo git) e preencha.
+projeto_id = "svv-dev-1234"
+regiao     = "us-east1"

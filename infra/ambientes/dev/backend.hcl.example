@@ -1,0 +1,2 @@
+# Copie para backend.hcl (ignorado pelo git). Valor em `terraform output` do bootstrap.
+bucket = "svv-dev-1234-tfstate"

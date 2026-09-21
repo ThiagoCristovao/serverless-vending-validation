@@ -1,0 +1,38 @@
+%% Diagrama de componentes do ecossistema (docs/arquitetura.md, seção 2)
+flowchart TB
+  subgraph campo["Campo"]
+    OP([Operador de campo])
+    MAQ[/"Crane National 168<br/>offline · teclado · código supervisor"/]
+    APP["Aplicativo Flutter (Android)<br/>Riverpod · mobile_scanner"]
+    OP -->|lê QR, digita código, lê medidor| MAQ
+    OP --> APP
+  end
+
+  subgraph gcp["Google Cloud · us-east1"]
+    FA["Firebase Authentication<br/>e-mail e senha · emite JWT"]
+    GW["API Gateway<br/>valida JWT · roteia"]
+    FN["Cloud Run function · Go<br/>svv-validacao"]
+    FS[("Firestore<br/>maquinas · validacoes<br/>operadores · chavesQr")]
+    SM["Secret Manager<br/>chave HMAC"]
+    PS[["Pub/Sub<br/>svv-validacoes"]]
+    DLQ[["Pub/Sub<br/>svv-validacoes-dlq"]]
+    OBS["Cloud Logging<br/>Cloud Monitoring"]
+  end
+
+  subgraph central["Sistema central (simulado)"]
+    SC["Consumidor Go<br/>idempotente · interruptor de falha"]
+  end
+
+  APP -->|"1. login"| FA
+  FA -->|"2. ID token (JWT)"| APP
+  APP -->|"3. HTTPS + Bearer JWT<br/>Idempotency-Key"| GW
+  GW -->|"4. invoca com identidade própria<br/>X-Apigw-Api-Userinfo"| FN
+  FN <-->|"5. transações"| FS
+  FN -->|"lê chave"| SM
+  FN -->|"6. publica eventos<br/>chave de ordenação idMaquina"| PS
+  PS -->|"7. entrega quando disponível<br/>retentativa 10 s–600 s"| SC
+  PS -. "após 5 falhas" .-> DLQ
+  FN --> OBS
+  PS --> OBS
+
+  TF["Terraform<br/>infra/"] -. provisiona .-> gcp

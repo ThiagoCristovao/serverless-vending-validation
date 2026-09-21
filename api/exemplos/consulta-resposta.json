@@ -1,0 +1,21 @@
+{
+  "idValidacao": "01J8ZK3V9Q7XW2N4M6P8R0T2Y4",
+  "status": "concluida",
+  "iniciadaEm": "2026-09-17T13:05:12Z",
+  "expiraEm": "2026-09-17T13:20:12Z",
+  "concluidaEm": "2026-09-17T13:19:44Z",
+  "maquina": {
+    "id": "VM-2047",
+    "modelo": "CN168",
+    "localizacao": {
+      "id": "BLA-T",
+      "nome": "Bloco A - Térreo"
+    },
+    "ultimaValidacaoEm": "2026-09-17T13:19:44Z"
+  },
+  "leituras": {
+    "medidor": 14832,
+    "unidadesVendidas": 137
+  },
+  "codigoRotacionado": true
+}

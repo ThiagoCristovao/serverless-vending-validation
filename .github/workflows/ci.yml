@@ -1,0 +1,47 @@
+# Verificações mínimas da Sprint 0. Roda sem credenciais GCP.
+# Jobs de Go (Sprint 4) e Flutter (Sprint 6) serão adicionados quando houver código,
+# filtrados por caminho para manter a CI rápida (ADR-0001).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform:
+    name: Terraform (${{ matrix.diretorio }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        diretorio: [infra/bootstrap, infra/ambientes/dev]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.3
+      - name: Formatação
+        run: terraform -chdir=${{ matrix.diretorio }} fmt -check -diff -recursive
+      - name: Init sem backend
+        run: terraform -chdir=${{ matrix.diretorio }} init -backend=false -input=false
+      - name: Validate
+        run: terraform -chdir=${{ matrix.diretorio }} validate
+
+  openapi:
+    name: OpenAPI (lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: redocly lint
+        run: npx --yes @redocly/cli@latest lint api/openapi.yaml

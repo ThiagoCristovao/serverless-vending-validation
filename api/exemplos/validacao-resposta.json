@@ -1,0 +1,18 @@
+{
+  "idValidacao": "01J8ZK3V9Q7XW2N4M6P8R0T2Y4",
+  "status": "aberta",
+  "contrassenha": "4729",
+  "proximaContrassenha": "0318",
+  "iniciadaEm": "2026-09-17T13:05:12Z",
+  "expiraEm": "2026-09-17T13:20:12Z",
+  "concluidaEm": null,
+  "maquina": {
+    "id": "VM-2047",
+    "modelo": "CN168",
+    "localizacao": {
+      "id": "BLA-T",
+      "nome": "Bloco A - Térreo"
+    },
+    "ultimaValidacaoEm": "2026-09-03T10:41:00Z"
+  }
+}
