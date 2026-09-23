@@ -35,10 +35,10 @@ com fluxos de exceção, está em [docs/arquitetura.md](docs/arquitetura.md).
 
 ## Estado do projeto
 
-Sprints concluídas: **0** (fundação) e **3** (infraestrutura base: Firestore, Pub/Sub com DLQ,
-Firebase Authentication, IAM, observabilidade, tudo em Terraform e recriável por `destroy` +
-`apply`). Sprints 1 e 2 têm os documentos-esqueleto prontos. Próximas: **4** (domínio Go) e **6**
-(aplicativo) em paralelo. O planejamento completo está em
+Sprints concluídas: **0** (fundação), **3** (infraestrutura base em Terraform, recriável por
+`destroy` + `apply`) e **4** (domínio do serviço em Go, com casos de uso e testes que rodam sem
+rede). Sprints 1 e 2 têm os documentos-esqueleto prontos. Próximas: **5** (adaptadores, função e
+gateway) e **6** (aplicativo) em paralelo. O planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 

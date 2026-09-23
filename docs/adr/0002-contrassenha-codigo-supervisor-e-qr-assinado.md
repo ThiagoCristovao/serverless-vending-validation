@@ -1,6 +1,6 @@
 # ADR-0002: Contrassenha como código supervisor rotacionado e QR estático assinado
 
-- **Status:** proposta (validar com orientador)
+- **Status:** aceita (validada com o orientador em 2026-09-23)
 - **Data:** 2026-09-16
 - **Decisores:** Thiago Cristovão de Souza; Prof. Muriel de Souza Godoi
 - **Sprint:** 1
@@ -75,7 +75,7 @@ operacionais".
 - O manual não foi verificado quanto a restrições de código (ex.: zeros à esquerda ou códigos
   reservados). **TODO (Sprint 1):** ler as seções "Enter a New Supervisor Code" e "Enter a
   Freevend Code" do manual e registrar restrições.
-- Desvio de redação em relação ao TCC 1; precisa ser aceito pelo orientador.
+- Desvio de redação em relação ao TCC 1, aceito pelo orientador; a monografia deve explicá-lo.
 
 ## Referências
 

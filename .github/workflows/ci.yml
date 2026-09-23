@@ -1,6 +1,5 @@
 # Verificações mínimas da Sprint 0. Roda sem credenciais GCP.
-# Jobs de Go (Sprint 4) e Flutter (Sprint 6) serão adicionados quando houver código,
-# filtrados por caminho para manter a CI rápida (ADR-0001).
+# O job de Flutter (Sprint 6) será adicionado quando houver código do aplicativo.
 name: CI
 
 on:
@@ -45,3 +44,24 @@ jobs:
           node-version: 22
       - name: redocly lint
         run: npx --yes @redocly/cli@latest lint api/openapi.yaml
+
+  go:
+    name: Go (servico)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: servico
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: servico/go.mod
+          cache: false
+      - name: gofmt
+        run: |
+          fora="$(gofmt -l .)"
+          if [ -n "$fora" ]; then echo "fora do gofmt:"; echo "$fora"; exit 1; fi
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./... -count=1
