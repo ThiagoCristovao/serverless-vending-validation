@@ -14,6 +14,12 @@
 provider "google" {
   project = var.projeto_id
   region  = var.regiao
+
+  # A API de orçamentos (billingbudgets) exige um projeto de cota quando a
+  # autenticação usa credenciais de usuário (ADC). Sem estas duas linhas o
+  # apply falha com "Error 403: ... requires a quota project".
+  user_project_override = true
+  billing_project       = var.projeto_id
 }
 
 data "google_project" "atual" {

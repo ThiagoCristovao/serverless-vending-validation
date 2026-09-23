@@ -71,11 +71,12 @@ make infra-bootstrap-init
 make infra-bootstrap-plan
 make infra-bootstrap-apply
 terraform -chdir=infra/bootstrap output
+make infra-bootstrap-salvar-estado
 ```
 
 O bootstrap habilita as APIs, cria o bucket de estado com versionamento e um orçamento mensal
-com alertas em 50 %, 90 % e 100 %. Guarde o `infra/bootstrap/terraform.tfstate` em local seguro:
-ele não é versionado.
+com alertas em 50 %, 90 % e 100 %. O `infra/bootstrap/terraform.tfstate` fica fora do git; após cada
+apply, copie-o para o bucket com `make infra-bootstrap-salvar-estado`.
 
 ## 4. Ambiente de desenvolvimento
 
@@ -116,3 +117,4 @@ Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais
 | API "not enabled" logo após o bootstrap | Propagação da habilitação leva alguns minutos | Aguardar e repetir |
 | `terraform init` falha em `ambientes/dev` | `backend.hcl` ausente ou bucket errado | Conferir a saída `backend_hcl_sugerido` do bootstrap |
 | Terraform via Docker cria arquivos como root | Fallback Docker sem `-u` | O Makefile já passa `-u $(id -u):$(id -g)`; apague `.terraform/` e repita |
+| `Error 403: ... requires a quota project` ao criar o orçamento | Provider sem `user_project_override` e `billing_project` com credenciais de usuário | Já corrigido em `infra/bootstrap/main.tf`; se aparecer em outra API, adicionar as mesmas duas linhas ao provider |

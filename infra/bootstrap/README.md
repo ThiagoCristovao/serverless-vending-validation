@@ -15,8 +15,10 @@ Uma vez por projeto GCP, logo após criar o projeto e vinculá-lo ao faturamento
 ## Estado
 
 Este diretório usa **estado local** porque o bucket de estado ainda não existe quando ele roda.
-O arquivo `terraform.tfstate` gerado fica fora do versionamento (`.gitignore`). Guarde uma cópia
-em local seguro; sem ele, alterações futuras no bootstrap exigem `terraform import`.
+O arquivo `terraform.tfstate` gerado fica fora do versionamento (`.gitignore`). Após cada `apply`,
+copie-o para o bucket recém-criado com `make infra-bootstrap-salvar-estado`; o bucket é versionado,
+então cada cópia fica preservada. Sem o estado, alterações futuras no bootstrap exigem
+`terraform import`.
 
 ## Como executar
 
@@ -26,6 +28,7 @@ cp infra/bootstrap/terraform.tfvars.example infra/bootstrap/terraform.tfvars
 make infra-bootstrap-init
 make infra-bootstrap-plan
 make infra-bootstrap-apply
+make infra-bootstrap-salvar-estado
 ```
 
 Pré-requisito: `gcloud auth application-default login` já executado e a API

@@ -31,7 +31,7 @@ else
 endif
 
 .PHONY: ajuda configurar verificar infra-formatar infra-formatar-verificar infra-validar api-lint \
-        infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply \
+        infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
         infra-dev-init infra-dev-plan infra-dev-apply
 
 ajuda: ## Lista os alvos disponíveis
@@ -67,6 +67,9 @@ infra-bootstrap-plan: ## Planeja o bootstrap
 
 infra-bootstrap-apply: ## Aplica o bootstrap (APIs, bucket de estado, orçamento)
 	$(TERRAFORM) -chdir=infra/bootstrap apply -input=false
+
+infra-bootstrap-salvar-estado: ## Copia o estado local do bootstrap para o bucket de estado (backup versionado)
+	gcloud storage cp infra/bootstrap/terraform.tfstate "gs://$$($(TERRAFORM) -chdir=infra/bootstrap output -raw bucket_estado_nome)/bootstrap/terraform.tfstate"
 
 infra-dev-init: ## Inicializa o ambiente dev contra o backend GCS (requer infra/ambientes/dev/backend.hcl)
 	$(TERRAFORM) -chdir=infra/ambientes/dev init -input=false -backend-config=backend.hcl
