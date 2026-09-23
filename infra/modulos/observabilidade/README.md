@@ -1,15 +1,22 @@
-# Módulo `observabilidade` — Sprint 3 (base) e Sprint 5 (métricas do serviço)
+# Módulo `observabilidade` — implementado na Sprint 3
 
-**Responsabilidade.** Logs, métricas, painéis e alertas usados na avaliação técnica (Sprints 9 e 10).
+Canal de notificação por e-mail, métrica derivada de log (erros do serviço por `codigo`), duas
+políticas de alerta e o painel usado na avaliação técnica.
 
-**Recursos previstos**
+| Alerta | Condição | Cenário |
+|---|---|---|
+| Mensagens na DLQ | `num_undelivered_messages` > 0 por 5 min na assinatura de inspeção | CE-16 |
+| Backlog no sistema central | `num_undelivered_messages` > `limiar_backlog` por 10 min | CE-15 |
 
-- `google_logging_metric` — métricas baseadas em log: contagem por `codigo` de erro do serviço.
-- `google_monitoring_dashboard` — painel com latência p50/p95/p99 e contagem de instâncias da
-  função, backlog da assinatura (`subscription/num_undelivered_messages`), idade da mensagem mais
-  antiga (`subscription/oldest_unacked_message_age`) e tamanho da DLQ.
-- `google_monitoring_alert_policy` — backlog acima do limiar por 10 min; qualquer mensagem na DLQ.
-- `google_monitoring_notification_channel` — e-mail do autor.
-- Retenção de logs padrão (30 dias) é suficiente para o trabalho.
+Painel: latência p50/p95/p99 e instâncias da função (métricas do Cloud Run), mensagens não entregues
+nas duas assinaturas, idade da mensagem mais antiga e erros por código.
 
-**Entradas previstas.** `projeto_id`, nomes da função e das assinaturas.
+| Entrada | Descrição | Padrão |
+|---|---|---|
+| `projeto_id`, `prefixo` | Projeto e prefixo | — |
+| `email_alertas` | Destinatário dos alertas | — |
+| `nome_funcao` | Serviço Cloud Run da função (filtros) | — |
+| `assinatura_central_nome`, `assinatura_dlq_nome` | Assinaturas monitoradas | — |
+| `limiar_backlog` | Limiar do alerta de backlog | `100` |
+
+Os gráficos da função ficam vazios até a Sprint 5, quando a função passa a existir.

@@ -1,3 +1,5 @@
 # Copie para terraform.tfvars (ignorado pelo git) e preencha.
-projeto_id = "svv-dev-1234"
-regiao     = "us-east1"
+projeto_id     = "svv-dev-1234"
+regiao         = "us-east1"
+pacote_android = "br.edu.utfpr.svv"
+email_alertas  = "seu-email@exemplo.com"

@@ -1,22 +1,20 @@
-# Módulo `autenticacao` — Sprint 3
+# Módulo `autenticacao` — implementado na Sprint 3
 
-**Responsabilidade.** Firebase Authentication (via Identity Platform) e registro do aplicativo
-Android no Firebase.
+Registra o aplicativo Android no Firebase e expõe o conteúdo do `google-services.json` como saída
+sensível (gravado com `make app-google-services`, nunca versionado).
 
-**Recursos previstos** (provider `google-beta`)
+As duas habilitações **irreversíveis** do projeto, Firebase e Identity Platform (provedor e-mail e
+senha), não ficam aqui: estão em [`infra/bootstrap/firebase.tf`](../../bootstrap/firebase.tf),
+porque a API não permite desfazê-las e o ambiente precisa passar por `destroy` + `apply` sem
+intervenção manual (ADR-0010).
 
-- `google_firebase_project` — habilita o Firebase no projeto GCP.
-- `google_identity_platform_config` — ativa o Identity Platform e o provedor e-mail/senha
-  (`sign_in { email { enabled = true, password_required = true } }`), desabilitando cadastro
-  aberto (operadores são criados por administração).
-- `google_firebase_android_app` — registro do app (`package_name`), com
-  `google_firebase_android_app_config` (data source) para gerar o `google-services.json`, que
-  **não** é versionado.
-- `google_identity_platform_default_supported_idp_config` — não previsto (sem login social).
+| Entrada | Descrição | Padrão |
+|---|---|---|
+| `projeto_id` | Projeto GCP já habilitado no Firebase | — |
+| `pacote_android` | Pacote do app (`applicationId`) | — |
+| `nome_app_android` | Nome de exibição no Firebase | `svv-aplicativo` |
 
-**Entradas previstas.** `projeto_id`, `pacote_android`.
+Saídas: `app_android_id`, `google_services_nome_arquivo`, `google_services_json` (sensível).
 
-**Saídas previstas.** `google_services_json` (sensível), `projeto_firebase`.
-
-**Observação.** A primeira ativação do Firebase pode exigir aceite de termos no console; registrar
-no ADR se acontecer, pois afeta o critério "sem intervenção manual" da Sprint 3.
+Operadores são criados por administração (script `ferramentas/semear-firestore` ou console), não
+por autocadastro no aplicativo.

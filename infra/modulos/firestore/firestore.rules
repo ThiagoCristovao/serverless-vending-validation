@@ -1,0 +1,11 @@
+// Regras do Firestore para o ecossistema de validação (docs/modelo-dados.md, seção 4).
+// Nenhum cliente (aplicativo) acessa o banco diretamente: todo acesso passa pelo
+// serviço de validação, cuja conta de serviço não está sujeita a estas regras.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
