@@ -52,3 +52,9 @@ variable "orcamento_moeda" {
   description = "Código da moeda do orçamento. Deve coincidir com a moeda da conta de faturamento (BRL para contas brasileiras, USD para contas em dólar)."
   default     = "BRL"
 }
+
+variable "dominios_autorizados" {
+  type        = list(string)
+  description = "Domínios adicionais autorizados para redirecionamentos do Firebase Authentication."
+  default     = []
+}

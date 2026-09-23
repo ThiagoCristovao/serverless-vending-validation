@@ -47,11 +47,19 @@ Com Docker instalado, `make verificar` funciona sem `terraform` nem `redocly` lo
 usa as imagens `hashicorp/terraform` e `redocly/cli`. Essa alternativa **não** serve para aplicar
 infraestrutura.
 
-## 2. Projeto GCP
+## 2. Projeto GCP (criado pelo console do Firebase)
+
+Crie o projeto **pelo console do Firebase**, não pelo `gcloud` (ADR-0010). Projetos criados pela
+CLI não apareceram como elegíveis ao Firebase e a habilitação via API respondeu `403` mesmo com
+todas as permissões presentes e sem políticas de organização restritivas.
+
+1. Em <https://console.firebase.google.com>, clique em "Adicionar projeto", digite o nome
+   (ex.: `svv-dev`), aceite ou ajuste o ID sugerido, mantenha a organização padrão e **desative o
+   Google Analytics**.
+2. Anote o ID do projeto e siga:
 
 ```bash
-export PROJETO_ID="svv-dev-$(date +%s | tail -c 5)"   # ex.: svv-dev-4821; IDs são globais e imutáveis
-gcloud projects create "$PROJETO_ID" --name="svv-dev"
+export PROJETO_ID="svv-dev"
 gcloud billing accounts list                            # copie o ACCOUNT_ID
 gcloud billing projects link "$PROJETO_ID" --billing-account="XXXXXX-XXXXXX-XXXXXX"
 gcloud config set project "$PROJETO_ID"
@@ -59,8 +67,9 @@ gcloud auth application-default set-quota-project "$PROJETO_ID"
 gcloud services enable serviceusage.googleapis.com cloudresourcemanager.googleapis.com
 ```
 
-A última linha habilita manualmente as duas APIs de que o Terraform precisa para habilitar todas
-as outras.
+O console já habilita o Firebase; o bootstrap adota o projeto Firebase por um bloco `import` e
+ativa o Identity Platform. Como essas duas habilitações são irreversíveis, ficam no bootstrap e não
+no ambiente, que assim passa por `destroy` + `apply` sem passos manuais.
 
 ## 3. Bootstrap (uma vez por projeto)
 
@@ -90,9 +99,9 @@ make infra-dev-plan        # sem alterações até a Sprint 3
 
 ## 5. Firebase
 
-O Firebase é habilitado por Terraform na Sprint 3 (módulo `autenticacao`). Se a primeira ativação
-exigir aceite de termos no [console do Firebase](https://console.firebase.google.com), faça-o uma
-vez e registre o fato no ADR correspondente.
+O projeto já nasce habilitado no Firebase (passo 2). O Identity Platform (e-mail e senha) é ativado
+pelo bootstrap (passo 3); o registro do app Android e as regras do Firestore são criados no passo 4. O
+`google-services.json` do aplicativo é gerado com `make app-google-services` (Sprint 6).
 
 ## 6. Custos
 
@@ -118,3 +127,5 @@ Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais
 | `terraform init` falha em `ambientes/dev` | `backend.hcl` ausente ou bucket errado | Conferir a saída `backend_hcl_sugerido` do bootstrap |
 | Terraform via Docker cria arquivos como root | Fallback Docker sem `-u` | O Makefile já passa `-u $(id -u):$(id -g)`; apague `.terraform/` e repita |
 | `Error 403: ... requires a quota project` ao criar o orçamento | Provider sem `user_project_override` e `billing_project` com credenciais de usuário | Já corrigido em `infra/bootstrap/main.tf`; se aparecer em outra API, adicionar as mesmas duas linhas ao provider |
+| Projeto criado via `gcloud` não aparece em "Adicionar projeto" do Firebase; `google_firebase_project` falha com `403 The caller does not have permission` | Elegibilidade do projeto no Firebase (causa não documentada pelo Google; permissões e políticas estavam corretas) | Criar o projeto pelo console do Firebase e vincular o faturamento depois (ADR-0010) |
+| `Database ID '(default)' is not available ... retry in N seconds` logo após um `destroy` | O Firestore reserva o ID do banco excluído por ~5 minutos | Aguardar e repetir `make infra-dev-apply` |

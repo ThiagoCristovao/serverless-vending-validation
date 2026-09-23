@@ -1,42 +1,9 @@
 # -----------------------------------------------------------------------------
-# Firebase Authentication (via Identity Platform) e registro do app Android.
+# Registro do aplicativo Android no Firebase e conteúdo do google-services.json.
 #
-# Observação: habilitar o Firebase e o Identity Platform em um projeto são ações
-# que não podem ser desfeitas pela API. No `terraform destroy` esses dois
-# recursos apenas saem do estado; o `apply` seguinte os reencontra.
+# Firebase e Identity Platform (habilitações irreversíveis) são geridos no
+# bootstrap; aqui fica só o que pode ser destruído e recriado livremente.
 # -----------------------------------------------------------------------------
-
-resource "google_firebase_project" "principal" {
-  provider = google-beta
-
-  project = var.projeto_id
-}
-
-resource "google_identity_platform_config" "principal" {
-  project = var.projeto_id
-
-  autodelete_anonymous_users = false
-
-  sign_in {
-    allow_duplicate_emails = false
-
-    email {
-      enabled           = true
-      password_required = true
-    }
-
-    anonymous {
-      enabled = false
-    }
-  }
-
-  authorized_domains = concat(
-    ["localhost", "${var.projeto_id}.firebaseapp.com", "${var.projeto_id}.web.app"],
-    var.dominios_autorizados,
-  )
-
-  depends_on = [google_firebase_project.principal]
-}
 
 resource "google_firebase_android_app" "operador" {
   provider = google-beta
@@ -46,12 +13,10 @@ resource "google_firebase_android_app" "operador" {
   package_name = var.pacote_android
 
   deletion_policy = "DELETE"
-
-  depends_on = [google_firebase_project.principal]
 }
 
-# Conteúdo do google-services.json, consumido pelo aplicativo (Sprint 6).
-# Nunca versionado: gerado a partir da saída do Terraform.
+# Consumido pelo aplicativo (Sprint 6). Nunca versionado: gerado a partir da
+# saída do Terraform com `make app-google-services`.
 data "google_firebase_android_app_config" "operador" {
   provider = google-beta
 

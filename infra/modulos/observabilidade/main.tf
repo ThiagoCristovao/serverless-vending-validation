@@ -124,6 +124,7 @@ locals {
   grafico_latencia = [
     for p in ["50", "95", "99"] : {
       plotType       = "LINE"
+      targetAxis     = "Y1"
       legendTemplate = "p${p}"
       timeSeriesQuery = {
         timeSeriesFilter = {
@@ -141,6 +142,7 @@ locals {
   grafico_assinaturas = [
     for nome in [var.assinatura_central_nome, var.assinatura_dlq_nome] : {
       plotType       = "LINE"
+      targetAxis     = "Y1"
       legendTemplate = nome
       timeSeriesQuery = {
         timeSeriesFilter = {
@@ -164,19 +166,20 @@ resource "google_monitoring_dashboard" "principal" {
       columns = 12
       tiles = [
         {
-          xPos = 0, yPos = 0, width = 6, height = 4
+          width = 6, height = 4
           widget = {
             title   = "Latência da função (p50, p95, p99)"
             xyChart = { dataSets = local.grafico_latencia, yAxis = { scale = "LINEAR" } }
           }
         },
         {
-          xPos = 6, yPos = 0, width = 6, height = 4
+          xPos = 6, width = 6, height = 4
           widget = {
             title = "Instâncias da função"
             xyChart = {
               dataSets = [{
-                plotType = "LINE"
+                plotType   = "LINE"
+                targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
                     filter = "metric.type=\"run.googleapis.com/container/instance_count\" ${local.filtro_funcao}"
@@ -193,7 +196,7 @@ resource "google_monitoring_dashboard" "principal" {
           }
         },
         {
-          xPos = 0, yPos = 4, width = 6, height = 4
+          yPos = 4, width = 6, height = 4
           widget = {
             title   = "Mensagens não entregues (principal e DLQ)"
             xyChart = { dataSets = local.grafico_assinaturas, yAxis = { scale = "LINEAR" } }
@@ -205,7 +208,8 @@ resource "google_monitoring_dashboard" "principal" {
             title = "Idade da mensagem mais antiga sem confirmação (s)"
             xyChart = {
               dataSets = [{
-                plotType = "LINE"
+                plotType   = "LINE"
+                targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
                     filter = "metric.type=\"pubsub.googleapis.com/subscription/oldest_unacked_message_age\" resource.type=\"pubsub_subscription\" resource.label.\"subscription_id\"=\"${var.assinatura_central_nome}\""
@@ -221,12 +225,13 @@ resource "google_monitoring_dashboard" "principal" {
           }
         },
         {
-          xPos = 0, yPos = 8, width = 12, height = 4
+          yPos = 8, width = 12, height = 4
           widget = {
             title = "Erros do serviço por código"
             xyChart = {
               dataSets = [{
-                plotType = "STACKED_BAR"
+                plotType   = "STACKED_BAR"
+                targetAxis = "Y1"
                 timeSeriesQuery = {
                   timeSeriesFilter = {
                     filter = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.erros_por_codigo.name}\" resource.type=\"cloud_run_revision\""

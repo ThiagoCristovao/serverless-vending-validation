@@ -4,6 +4,9 @@
 # Compõe os módulos de infra/modulos. Sprint 3: recursos que não dependem do
 # código da aplicação. Sprint 5: função e gateway (comentados abaixo).
 #
+# Firebase e Identity Platform (irreversíveis) são geridos no bootstrap, o que
+# mantém este ambiente inteiramente destrutível e recriável.
+#
 # Critério da Sprint 3: `terraform destroy` seguido de `terraform apply` recria
 # o ambiente integralmente, sem intervenção manual no console.
 # -----------------------------------------------------------------------------
@@ -41,9 +44,6 @@ module "firestore" {
   projeto_id        = var.projeto_id
   regiao            = var.regiao
   protecao_exclusao = false
-
-  # As regras de segurança (Firebase Rules) exigem o projeto habilitado no Firebase.
-  depends_on = [module.autenticacao]
 }
 
 module "pubsub" {

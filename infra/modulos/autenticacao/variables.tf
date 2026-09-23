@@ -1,6 +1,6 @@
 variable "projeto_id" {
   type        = string
-  description = "ID do projeto GCP."
+  description = "ID do projeto GCP (já habilitado no Firebase pelo bootstrap)."
 }
 
 variable "pacote_android" {
@@ -12,10 +12,4 @@ variable "nome_app_android" {
   type        = string
   description = "Nome de exibição do aplicativo no Firebase."
   default     = "svv-aplicativo"
-}
-
-variable "dominios_autorizados" {
-  type        = list(string)
-  description = "Domínios adicionais autorizados para redirecionamentos de autenticação."
-  default     = []
 }

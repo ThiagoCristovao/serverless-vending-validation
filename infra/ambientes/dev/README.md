@@ -24,8 +24,16 @@ make segredo-hmac-gerar        # uma vez: cria a primeira versão da chave HMAC
 Na CI e no `make verificar`, o diretório é validado com `terraform init -backend=false`, sem
 credenciais.
 
-## Recursos que não podem ser desfeitos
+## Recursos irreversíveis ficam no bootstrap
 
-Habilitar o Firebase e o Identity Platform no projeto são ações sem "desfazer" na API. No
-`terraform destroy` esses dois recursos apenas saem do estado; o `apply` seguinte volta a
-gerenciá-los. O restante (banco, tópicos, contas, alertas, painel) é destruído e recriado de fato.
+Habilitar o Firebase e o Identity Platform não pode ser desfeito pela API. Esses dois recursos são
+geridos em [`infra/bootstrap/firebase.tf`](../../bootstrap/firebase.tf), aplicado uma vez por projeto
+e nunca destruído. Assim, tudo neste ambiente (banco, tópicos, contas, app Android, alertas, painel)
+é destruído e recriado de fato por `terraform destroy` + `terraform apply` (critério da Sprint 3).
+
+## Recriação do Firestore após `destroy`
+
+Ao excluir o banco `(default)`, o Firestore reserva esse ID por cerca de **5 minutos**. Um `apply`
+imediato falha em `google_firestore_database` com `Database ID '(default)' is not available ...
+retry in N seconds`; os demais recursos são criados normalmente. Basta repetir o `apply` após a
+espera. Os três índices compostos levam cerca de 7 minutos para ficar prontos.

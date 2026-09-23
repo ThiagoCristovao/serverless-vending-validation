@@ -15,3 +15,6 @@ Saídas: `banco_nome`, `banco_id`.
 
 As regras ficam em `firestore.rules` e são publicadas como release `cloud.firestore`; alterar o
 arquivo gera um novo ruleset e a release é substituída automaticamente.
+
+Após `destroy`, o ID `(default)` fica reservado por cerca de 5 minutos; um `apply` nesse intervalo
+falha só neste recurso e deve ser repetido. Os índices compostos levam ~7 minutos para ficar prontos.

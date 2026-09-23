@@ -1,8 +1,3 @@
-output "projeto_firebase" {
-  description = "Projeto habilitado no Firebase."
-  value       = google_firebase_project.principal.project
-}
-
 output "app_android_id" {
   description = "Identificador do app Android no Firebase."
   value       = google_firebase_android_app.operador.app_id

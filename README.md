@@ -35,7 +35,10 @@ com fluxos de exceção, está em [docs/arquitetura.md](docs/arquitetura.md).
 
 ## Estado do projeto
 
-Sprint atual: **0 — Fundação do ambiente e do repositório**. O planejamento completo está em
+Sprints concluídas: **0** (fundação) e **3** (infraestrutura base: Firestore, Pub/Sub com DLQ,
+Firebase Authentication, IAM, observabilidade, tudo em Terraform e recriável por `destroy` +
+`apply`). Sprints 1 e 2 têm os documentos-esqueleto prontos. Próximas: **4** (domínio Go) e **6**
+(aplicativo) em paralelo. O planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 

@@ -17,3 +17,8 @@ output "backend_hcl_sugerido" {
   description = "Conteúdo sugerido para infra/ambientes/dev/backend.hcl."
   value       = "bucket = \"${google_storage_bucket.estado_terraform.name}\""
 }
+
+output "projeto_firebase" {
+  description = "Projeto habilitado no Firebase (adotado por import)."
+  value       = google_firebase_project.principal.project
+}
