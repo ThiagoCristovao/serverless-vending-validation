@@ -31,6 +31,7 @@ else
 endif
 
 .PHONY: ajuda configurar verificar infra-formatar infra-formatar-verificar infra-validar api-lint \
+        servico-formatar servico-formatar-verificar servico-verificar servico-cobertura \
         infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
         infra-dev-init infra-dev-plan infra-dev-apply segredo-hmac-gerar app-google-services
 
@@ -41,7 +42,7 @@ configurar: ## Instala o toolchain fixado (mise) e o Flutter (FVM)
 	mise install
 	cd aplicativo && fvm install
 
-verificar: infra-formatar-verificar infra-validar api-lint ## Executa todas as verificações locais (o mesmo que a CI)
+verificar: infra-formatar-verificar infra-validar api-lint servico-formatar-verificar servico-verificar ## Executa todas as verificações locais (o mesmo que a CI)
 
 infra-formatar: ## Formata os arquivos Terraform
 	$(TERRAFORM) fmt -recursive infra
@@ -58,6 +59,18 @@ infra-validar: ## Valida a sintaxe dos diretórios Terraform (sem backend, sem c
 
 api-lint: ## Valida o contrato OpenAPI
 	$(REDOCLY) lint $(OPENAPI)
+
+servico-formatar: ## Formata o código Go do serviço
+	cd servico && gofmt -w .
+
+servico-formatar-verificar: ## Falha se houver Go fora do padrão gofmt
+	@cd servico && fora="$$(gofmt -l .)"; if [ -n "$$fora" ]; then echo "fora do gofmt:"; echo "$$fora"; exit 1; fi
+
+servico-verificar: ## go vet e testes de unidade do serviço (rodam sem rede)
+	cd servico && go vet ./... && go test ./... -count=1
+
+servico-cobertura: ## Testes do serviço com relatório de cobertura por pacote
+	cd servico && go test ./... -count=1 -coverpkg=./... -coverprofile=coverage.out && go tool cover -func=coverage.out | tail -1
 
 infra-bootstrap-init: ## Inicializa o bootstrap (estado local, roda uma vez por projeto)
 	$(TERRAFORM) -chdir=infra/bootstrap init -input=false
