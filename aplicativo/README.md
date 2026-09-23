@@ -8,7 +8,9 @@ pelo FVM; use `fvm flutter ...` neste diretório.
 
 ```bash
 cd aplicativo
-fvm flutter create . --org br.edu.utfpr --project-name svv_aplicativo --platforms android
+fvm flutter create . --org br.edu.utfpr --project-name svv --platforms android
+# pacote resultante: br.edu.utfpr.svv (o mesmo registrado no Firebase pelo módulo autenticacao)
+make app-google-services   # grava android/app/google-services.json a partir do Terraform
 ```
 
 ## Estrutura prevista
@@ -31,5 +33,5 @@ lib/
 - Pacotes previstos: `firebase_core`, `firebase_auth`, `mobile_scanner`, `flutter_riverpod`,
   `go_router`, `dio`, `freezed` + `json_serializable`, `connectivity_plus`, `cryptography`
   (verificação Ed25519 do QR, desejável). Versões definidas na Sprint 6.
-- `google-services.json` é gerado pelo Terraform (módulo `autenticacao`) e **não** é versionado.
+- `google-services.json` é gerado pelo Terraform (módulo `autenticacao`) via `make app-google-services` e **não** é versionado.
 - Estados de tela definidos em `docs/arquitetura.md`, seção Telas e estados.

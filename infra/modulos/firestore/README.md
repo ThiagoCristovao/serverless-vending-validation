@@ -1,15 +1,17 @@
-# Módulo `firestore` — Sprint 3
+# Módulo `firestore` — implementado na Sprint 3
 
-**Responsabilidade.** Banco Firestore (modo nativo) e regras de segurança.
+Banco Firestore em modo nativo, backups diários, regras de segurança que negam todo acesso de
+cliente e os índices compostos de [docs/modelo-dados.md](../../../docs/modelo-dados.md).
 
-**Recursos previstos**
+| Entrada | Descrição | Padrão |
+|---|---|---|
+| `projeto_id` | Projeto GCP | — |
+| `regiao` | Região do banco | — |
+| `protecao_exclusao` | Protege contra exclusão (falso em dev para `destroy` + `apply`) | `false` |
+| `backup_diario` | Agenda backup diário | `true` |
+| `retencao_backup` | Retenção dos backups | `604800s` |
 
-- `google_firestore_database` — banco `(default)`, `location_id = us-east1`, `type = FIRESTORE_NATIVE`,
-  proteção contra exclusão habilitada, backups diários (`google_firestore_backup_schedule`).
-- `google_firebaserules_ruleset` + `google_firebaserules_release` — regras que **negam todo acesso de
-  cliente**: o aplicativo nunca fala com o Firestore; só o serviço, via conta de serviço.
-- `google_firestore_index` — índices compostos de [docs/modelo-dados.md](../../../docs/modelo-dados.md).
+Saídas: `banco_nome`, `banco_id`.
 
-**Entradas previstas.** `projeto_id`, `regiao`.
-
-**Saídas previstas.** `banco_nome`.
+As regras ficam em `firestore.rules` e são publicadas como release `cloud.firestore`; alterar o
+arquivo gera um novo ruleset e a release é substituída automaticamente.

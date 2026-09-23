@@ -51,6 +51,7 @@ locals {
     "pubsub.googleapis.com",
     "firestore.googleapis.com",
     "firebase.googleapis.com",
+    "firebaserules.googleapis.com",
     "identitytoolkit.googleapis.com",
     "secretmanager.googleapis.com",
     "logging.googleapis.com",

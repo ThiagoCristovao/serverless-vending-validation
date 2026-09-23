@@ -32,7 +32,7 @@ endif
 
 .PHONY: ajuda configurar verificar infra-formatar infra-formatar-verificar infra-validar api-lint \
         infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
-        infra-dev-init infra-dev-plan infra-dev-apply
+        infra-dev-init infra-dev-plan infra-dev-apply segredo-hmac-gerar app-google-services
 
 ajuda: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
@@ -79,3 +79,11 @@ infra-dev-plan: ## Planeja o ambiente dev
 
 infra-dev-apply: ## Aplica o ambiente dev
 	$(TERRAFORM) -chdir=infra/ambientes/dev apply -input=false
+
+segredo-hmac-gerar: ## Gera uma chave HMAC aleatória (32 bytes, hex) e a adiciona como nova versão do segredo (fora do Terraform)
+	openssl rand -hex 32 | tr -d '\n' | gcloud secrets versions add "$$($(TERRAFORM) -chdir=infra/ambientes/dev output -raw segredo_hmac_nome)" --data-file=-
+
+app-google-services: ## Grava aplicativo/android/app/google-services.json a partir da saída do Terraform (arquivo ignorado pelo git)
+	mkdir -p aplicativo/android/app
+	$(TERRAFORM) -chdir=infra/ambientes/dev output -raw google_services_json > aplicativo/android/app/google-services.json
+	@echo "google-services.json gravado"

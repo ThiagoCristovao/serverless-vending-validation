@@ -1,11 +1,13 @@
 # infra/ambientes/dev — ambiente de desenvolvimento
 
 Raiz Terraform do ambiente `dev`. Compõe os módulos de [`infra/modulos`](../../modulos) e usa o
-estado remoto no bucket criado pelo [bootstrap](../../bootstrap).
+estado remoto no bucket criado pelo [bootstrap](../../bootstrap) (prefixo `ambientes/dev`).
 
-Na Sprint 0 este diretório só define convenções (prefixo `svv-dev`, rótulos) e o backend; os
-módulos entram nas Sprints 3 e 5. Outros ambientes (`homolog`, `prod`) seguem o mesmo padrão em
-diretórios irmãos, com `prefix` próprio no backend.
+Sprint 3 (implementada): `iam`, `autenticacao`, `firestore`, `pubsub`, `observabilidade`.
+Sprint 5 (comentada em `main.tf`): `funcao`, `gateway`.
+
+Outros ambientes (`homolog`, `prod`) seguem o mesmo padrão em diretórios irmãos, com `prefix`
+próprio no backend e `protecao_exclusao = true` no Firestore.
 
 ## Como executar
 
@@ -15,7 +17,15 @@ cp infra/ambientes/dev/terraform.tfvars.example infra/ambientes/dev/terraform.tf
 # editar ambos
 make infra-dev-init
 make infra-dev-plan
+make infra-dev-apply
+make segredo-hmac-gerar        # uma vez: cria a primeira versão da chave HMAC
 ```
 
 Na CI e no `make verificar`, o diretório é validado com `terraform init -backend=false`, sem
 credenciais.
+
+## Recursos que não podem ser desfeitos
+
+Habilitar o Firebase e o Identity Platform no projeto são ações sem "desfazer" na API. No
+`terraform destroy` esses dois recursos apenas saem do estado; o `apply` seguinte volta a
+gerenciá-los. O restante (banco, tópicos, contas, alertas, painel) é destruído e recriado de fato.

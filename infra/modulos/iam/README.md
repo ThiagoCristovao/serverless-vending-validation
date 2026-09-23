@@ -1,20 +1,20 @@
-# Módulo `iam` — Sprint 3
+# Módulo `iam` — implementado na Sprint 3
 
-**Responsabilidade.** Contas de serviço e papéis segundo o princípio do menor privilégio.
+Contas de serviço e papéis de projeto segundo o menor privilégio, mais o segredo da chave HMAC da
+contrassenha (só o contêiner; o valor é criado fora do Terraform com `make segredo-hmac-gerar`).
 
-**Contas de serviço previstas**
-
-| Conta | Usada por | Papéis |
+| Conta | Papéis de projeto (aqui) | Papéis por recurso (em outros módulos) |
 |---|---|---|
-| `svv-<amb>-funcao-validacao` | Cloud Run function | `roles/datastore.user`, `roles/pubsub.publisher` (no tópico), `roles/secretmanager.secretAccessor` (no segredo da chave HMAC), `roles/logging.logWriter`, `roles/monitoring.metricWriter`, `roles/cloudtrace.agent` |
-| `svv-<amb>-gateway` | API Gateway | `roles/run.invoker` na função (concedido no módulo `funcao`) |
-| `svv-<amb>-central-simulado` | Sistema central simulado | `roles/pubsub.subscriber` na assinatura |
+| `<prefixo>-funcao-validacao` | `datastore.user`, `logging.logWriter`, `monitoring.metricWriter`, `cloudtrace.agent` | `pubsub.publisher` no tópico (`pubsub`); `secretmanager.secretAccessor` no segredo (aqui) |
+| `<prefixo>-gateway` | — | `run.invoker` na função (`funcao`, Sprint 5) |
+| `<prefixo>-central-simulado` | — | `pubsub.subscriber` nas assinaturas (`pubsub`) |
 
-**Recursos previstos.** `google_service_account`, `google_project_iam_member` (apenas quando o papel
-não puder ser concedido no recurso), `google_secret_manager_secret` da chave HMAC da contrassenha
-(valor definido fora do Terraform).
+| Entrada | Descrição | Padrão |
+|---|---|---|
+| `projeto_id`, `prefixo` | Projeto e prefixo | — |
+| `nome_segredo_hmac` | Sufixo do nome do segredo | `chave-hmac-contrassenha` |
 
-**Saídas previstas.** E-mails das contas de serviço.
+Saídas: e-mails das três contas, `segredo_hmac_nome`, `segredo_hmac_id`.
 
 Nesta fase o Terraform roda com a identidade do desenvolvedor (ADC); uma conta de serviço de
 implantação para CI fica como evolução.

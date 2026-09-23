@@ -1,9 +1,8 @@
 # -----------------------------------------------------------------------------
 # Ambiente de desenvolvimento (raiz Terraform).
 #
-# Este arquivo compõe os módulos de infra/modulos. Na Sprint 0 ele só define
-# convenções (prefixo, rótulos); os módulos entram na Sprint 3 (recursos que
-# não dependem do código) e na Sprint 5 (função e gateway).
+# Compõe os módulos de infra/modulos. Sprint 3: recursos que não dependem do
+# código da aplicação. Sprint 5: função e gateway (comentados abaixo).
 #
 # Critério da Sprint 3: `terraform destroy` seguido de `terraform apply` recria
 # o ambiente integralmente, sem intervenção manual no console.
@@ -21,47 +20,72 @@ locals {
 }
 
 # --- Sprint 3: recursos independentes do código -------------------------------
-#
-# module "firestore" {
-#   source     = "../../modulos/firestore"
-#   projeto_id = var.projeto_id
-#   regiao     = var.regiao
-# }
-#
-# module "pubsub" {
-#   source     = "../../modulos/pubsub"
-#   projeto_id = var.projeto_id
-#   prefixo    = local.prefixo
-# }
-#
-# module "autenticacao" {
-#   source     = "../../modulos/autenticacao"
-#   projeto_id = var.projeto_id
-# }
-#
-# module "iam" {
-#   source     = "../../modulos/iam"
-#   projeto_id = var.projeto_id
-#   prefixo    = local.prefixo
-# }
-#
-# module "observabilidade" {
-#   source     = "../../modulos/observabilidade"
-#   projeto_id = var.projeto_id
-# }
+
+module "iam" {
+  source = "../../modulos/iam"
+
+  projeto_id = var.projeto_id
+  prefixo    = local.prefixo
+}
+
+module "autenticacao" {
+  source = "../../modulos/autenticacao"
+
+  projeto_id     = var.projeto_id
+  pacote_android = var.pacote_android
+}
+
+module "firestore" {
+  source = "../../modulos/firestore"
+
+  projeto_id        = var.projeto_id
+  regiao            = var.regiao
+  protecao_exclusao = false
+
+  # As regras de segurança (Firebase Rules) exigem o projeto habilitado no Firebase.
+  depends_on = [module.autenticacao]
+}
+
+module "pubsub" {
+  source = "../../modulos/pubsub"
+
+  projeto_id             = var.projeto_id
+  prefixo                = local.prefixo
+  conta_publicador_email = module.iam.conta_funcao_email
+  conta_assinante_email  = module.iam.conta_central_email
+}
+
+module "observabilidade" {
+  source = "../../modulos/observabilidade"
+
+  projeto_id              = var.projeto_id
+  prefixo                 = local.prefixo
+  email_alertas           = var.email_alertas
+  nome_funcao             = "${local.prefixo}-validacao"
+  assinatura_central_nome = module.pubsub.assinatura_central_nome
+  assinatura_dlq_nome     = module.pubsub.assinatura_dlq_inspecao_nome
+}
 
 # --- Sprint 5: função e gateway ------------------------------------------------
 #
 # module "funcao" {
-#   source     = "../../modulos/funcao"
-#   projeto_id = var.projeto_id
-#   regiao     = var.regiao
-#   prefixo    = local.prefixo
+#   source = "../../modulos/funcao"
+#
+#   projeto_id          = var.projeto_id
+#   regiao              = var.regiao
+#   prefixo             = local.prefixo
+#   conta_funcao_email  = module.iam.conta_funcao_email
+#   conta_gateway_email = module.iam.conta_gateway_email
+#   topico_validacoes   = module.pubsub.topico_validacoes_nome
+#   segredo_hmac_id     = module.iam.segredo_hmac_id
 # }
 #
 # module "gateway" {
-#   source     = "../../modulos/gateway"
-#   projeto_id = var.projeto_id
-#   regiao     = var.regiao
-#   prefixo    = local.prefixo
+#   source = "../../modulos/gateway"
+#
+#   projeto_id          = var.projeto_id
+#   regiao              = var.regiao
+#   prefixo             = local.prefixo
+#   conta_gateway_email = module.iam.conta_gateway_email
+#   url_funcao          = module.funcao.url
 # }

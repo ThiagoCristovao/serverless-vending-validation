@@ -1,22 +1,22 @@
-# Módulo `autenticacao` — Sprint 3
+# Módulo `autenticacao` — implementado na Sprint 3
 
-**Responsabilidade.** Firebase Authentication (via Identity Platform) e registro do aplicativo
-Android no Firebase.
+Habilita o Firebase no projeto, ativa o Identity Platform com o provedor **e-mail e senha**
+(sem cadastro anônimo) e registra o aplicativo Android, expondo o conteúdo do
+`google-services.json` como saída sensível.
 
-**Recursos previstos** (provider `google-beta`)
+| Entrada | Descrição | Padrão |
+|---|---|---|
+| `projeto_id` | Projeto GCP | — |
+| `pacote_android` | Pacote do app (`applicationId`) | — |
+| `nome_app_android` | Nome de exibição no Firebase | `svv-aplicativo` |
+| `dominios_autorizados` | Domínios extras para redirecionamento | `[]` |
 
-- `google_firebase_project` — habilita o Firebase no projeto GCP.
-- `google_identity_platform_config` — ativa o Identity Platform e o provedor e-mail/senha
-  (`sign_in { email { enabled = true, password_required = true } }`), desabilitando cadastro
-  aberto (operadores são criados por administração).
-- `google_firebase_android_app` — registro do app (`package_name`), com
-  `google_firebase_android_app_config` (data source) para gerar o `google-services.json`, que
-  **não** é versionado.
-- `google_identity_platform_default_supported_idp_config` — não previsto (sem login social).
+Saídas: `projeto_firebase`, `app_android_id`, `google_services_nome_arquivo`,
+`google_services_json` (sensível).
 
-**Entradas previstas.** `projeto_id`, `pacote_android`.
+Operadores são criados por administração (script `ferramentas/semear-firestore` ou console), não
+por autocadastro no aplicativo.
 
-**Saídas previstas.** `google_services_json` (sensível), `projeto_firebase`.
-
-**Observação.** A primeira ativação do Firebase pode exigir aceite de termos no console; registrar
-no ADR se acontecer, pois afeta o critério "sem intervenção manual" da Sprint 3.
+**Irreversibilidade.** Habilitar o Firebase e o Identity Platform não pode ser desfeito pela API.
+No `terraform destroy` esses dois recursos apenas saem do estado; o `apply` seguinte os encontra e
+volta a gerenciá-los. Isso não afeta o critério da Sprint 3, pois o estado resultante é idêntico.

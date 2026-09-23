@@ -1,22 +1,19 @@
-# Módulo `pubsub` — Sprint 3
+# Módulo `pubsub` — implementado na Sprint 3
 
-**Responsabilidade.** Tópicos, assinaturas, fila de mensagens mortas e política de retentativa da
-mensageria entre o serviço de validação e o sistema central.
+Tópico `<prefixo>-validacoes`, assinatura ordenada `<prefixo>-sistema-central` com retentativa
+exponencial e fila de mensagens mortas `<prefixo>-validacoes-dlq` (com assinatura de inspeção).
+Concede publicação à função e consumo ao sistema central simulado, além dos papéis que o agente de
+serviço do Pub/Sub precisa para encaminhar mensagens mortas.
 
-**Recursos previstos**
+| Entrada | Descrição | Padrão |
+|---|---|---|
+| `projeto_id`, `prefixo` | Projeto e prefixo dos nomes | — |
+| `conta_publicador_email` | Conta de serviço da função | — |
+| `conta_assinante_email` | Conta de serviço do sistema central | — |
+| `retencao_mensagens` | Retenção no tópico e nas assinaturas | `604800s` |
+| `prazo_confirmacao_segundos` | `ack_deadline` | `60` |
+| `espera_minima` / `espera_maxima` | Retentativa exponencial | `10s` / `600s` |
+| `max_tentativas_entrega` | Tentativas antes da DLQ | `5` |
 
-- `google_pubsub_topic.validacoes` — `svv-<ambiente>-validacoes`, retenção de 7 dias, esquema opcional.
-- `google_pubsub_topic.validacoes_dlq` — `svv-<ambiente>-validacoes-dlq`.
-- `google_pubsub_subscription.sistema_central` — pull, `ack_deadline_seconds = 60`,
-  `enable_message_ordering = true`, `retry_policy { minimum_backoff = 10s, maximum_backoff = 600s }`,
-  `dead_letter_policy { max_delivery_attempts = 5 }`.
-- `google_pubsub_subscription.dlq_inspecao` — pull sobre a DLQ, para inspeção manual e testes.
-- `google_pubsub_topic_iam_member` / `google_pubsub_subscription_iam_member` — publicador (função) e
-  assinante (sistema central simulado); o agente de serviço do Pub/Sub precisa de `publisher` na DLQ
-  e `subscriber` na assinatura de origem.
-
-**Entradas previstas.** `projeto_id`, `prefixo`, contas de serviço do módulo `iam`.
-
-**Saídas previstas.** Nomes dos tópicos e assinaturas.
-
-Detalhes de desenho em [docs/arquitetura.md](../../../docs/arquitetura.md), seção Mensageria.
+Saídas: nomes e IDs dos tópicos e assinaturas. Desenho em
+[docs/arquitetura.md](../../../docs/arquitetura.md), seção 6.
