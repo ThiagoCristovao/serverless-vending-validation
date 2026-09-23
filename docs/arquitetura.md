@@ -221,12 +221,11 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0009](adr/0009-problem-details-e-idempotencia.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0010](adr/0010-projeto-gcp-criado-pelo-console-firebase.md).
+O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:
 
-- ADR-0002 (contrassenha como código supervisor rotacionado; QR assinado com validade) e o desvio
-  de redação em relação ao TCC 1.
 - Região `us-east1` (ADR-0003) e Android como alvo único (ADR-0004).
 - Alvos numéricos dos RNF-05, RNF-06 e RNF-17; prazo da RN-04; comportamento da RN-07.
 - Mecanismo de reconciliação de publicações pendentes (seção 6).
