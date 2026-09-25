@@ -4,8 +4,7 @@ package memoria
 
 import (
 	"context"
-	"crypto/rand"
-	"io"
+	"sort"
 	"sync"
 	"time"
 
@@ -186,6 +185,27 @@ func (a *Armazenamento) MarcarEventoPublicado(_ context.Context, id string, tipo
 	return nil
 }
 
+// PublicacoesPendentes implementa portas.RepositorioValidacoes.
+func (a *Armazenamento) PublicacoesPendentes(_ context.Context, antesDe time.Time, limite int) ([]*dominio.Validacao, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	var pendentes []*dominio.Validacao
+	for _, v := range a.validacoes {
+		iniciadaPendente := v.Eventos.IniciadaEm == nil && v.IniciadaEm.Before(antesDe)
+		concluidaPendente := v.Status == dominio.StatusConcluida && v.Eventos.ConcluidaEm == nil &&
+			v.ConcluidaEm != nil && v.ConcluidaEm.Before(antesDe)
+		if iniciadaPendente || concluidaPendente {
+			c := *v
+			pendentes = append(pendentes, &c)
+		}
+	}
+	sort.Slice(pendentes, func(i, j int) bool { return pendentes[i].IniciadaEm.Before(pendentes[j].IniciadaEm) })
+	if limite > 0 && len(pendentes) > limite {
+		pendentes = pendentes[:limite]
+	}
+	return pendentes, nil
+}
+
 // Publicador registra os eventos publicados; Falha, quando definida, simula
 // indisponibilidade do Pub/Sub.
 type Publicador struct {
@@ -235,19 +255,4 @@ func (r *Relogio) Avancar(d time.Duration) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.agora = r.agora.Add(d)
-}
-
-// GeradorUlid gera ULIDs com o instante do relógio e entropia criptográfica.
-type GeradorUlid struct {
-	Relogio   portas.Relogio
-	Aleatorio io.Reader
-}
-
-// NovoId implementa portas.GeradorIdentificador.
-func (g GeradorUlid) NovoId() (string, error) {
-	fonte := g.Aleatorio
-	if fonte == nil {
-		fonte = rand.Reader
-	}
-	return dominio.NovoUlid(g.Relogio.Agora(), fonte)
 }

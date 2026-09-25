@@ -25,6 +25,11 @@ type Dependencias struct {
 
 	// PrazoValidacao é o tempo para concluir uma validação (RN-04). Zero usa o padrão.
 	PrazoValidacao time.Duration
+	// AtrasoReconciliacao é a idade mínima de uma publicação pendente para ser
+	// reconciliada (evita competir com a publicação em andamento). Zero usa 2 min.
+	AtrasoReconciliacao time.Duration
+	// LoteReconciliacao limita quantas validações cada reconciliação examina. Zero usa 50.
+	LoteReconciliacao int
 	// Registrador recebe avisos operacionais; nil usa slog.Default().
 	Registrador *slog.Logger
 }
@@ -43,6 +48,12 @@ func Novo(dep Dependencias) (*Servico, error) {
 	}
 	if dep.PrazoValidacao <= 0 {
 		dep.PrazoValidacao = dominio.PrazoValidacaoPadrao
+	}
+	if dep.AtrasoReconciliacao <= 0 {
+		dep.AtrasoReconciliacao = 2 * time.Minute
+	}
+	if dep.LoteReconciliacao <= 0 {
+		dep.LoteReconciliacao = 50
 	}
 	if dep.Registrador == nil {
 		dep.Registrador = slog.Default()

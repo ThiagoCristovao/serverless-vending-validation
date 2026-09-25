@@ -1,0 +1,23 @@
+# Emuladores do Firestore e do Pub/Sub para os testes de integração (Sprint 5)
+# e para a execução local do serviço em modo nuvem sem credenciais.
+#
+#   make emuladores-subir      # sobe em segundo plano
+#   make servico-integracao    # roda os testes com tag `integracao`
+#   make emuladores-parar
+services:
+  firestore:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command: >
+      gcloud emulators firestore start
+        --host-port=0.0.0.0:8081
+        --project=svv-teste
+    ports:
+      - "8081:8081"
+  pubsub:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:emulators
+    command: >
+      gcloud beta emulators pubsub start
+        --host-port=0.0.0.0:8085
+        --project=svv-teste
+    ports:
+      - "8085:8085"

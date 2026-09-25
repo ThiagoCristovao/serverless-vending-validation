@@ -103,13 +103,39 @@ O projeto já nasce habilitado no Firebase (passo 2). O Identity Platform (e-mai
 pelo bootstrap (passo 3); o registro do app Android e as regras do Firestore são criados no passo 4. O
 `google-services.json` do aplicativo é gerado com `make app-google-services` (Sprint 6).
 
-## 6. Custos
+## 6. Testar o serviço implantado (Sprint 5)
+
+Com o ambiente aplicado, prepare dados de teste e chame o gateway. Os arquivos gerados ficam em
+`chaves/` (ignorado pelo git).
+
+```bash
+make app-google-services                 # aplicativo/android/app/google-services.json (traz a chave de API web)
+cd servico
+go run ./cmd/gerar-qr -gerar-chaves -saida ../chaves
+go run ./cmd/token-operador -google-services ../aplicativo/android/app/google-services.json \
+   -email operador1@exemplo.invalid -senha '<senha forte>' -criar > ../chaves/operador1.json
+go run ./cmd/semear-firestore -projeto svv-dev -operador-uid "$(python3 -c "import json;print(json.load(open('../chaves/operador1.json'))['uid'])")" \
+   -operador-email operador1@exemplo.invalid -chave-publica ../chaves/chave-publica-qr.txt
+go run ./cmd/gerar-qr -chave-privada ../chaves/chave-privada-qr.txt -png ../chaves/vm-2047.png > ../chaves/qr-vm-2047.json
+cd ..
+HOST=$(terraform -chdir=infra/ambientes/dev output -raw gateway_hostname)
+TOKEN=$(python3 -c "import json;print(json.load(open('chaves/operador1.json'))['idToken'])")
+curl -s -X POST "https://$HOST/v1/validacoes" -H "Authorization: Bearer $TOKEN" \
+   -H "Idempotency-Key: $(python3 -c 'import uuid;print(uuid.uuid4())')" -H 'Content-Type: application/json' \
+   -d "{\"qr\":$(cat chaves/qr-vm-2047.json)}"
+```
+
+A resposta `201` traz a contrassenha corrente e a próxima. O ID token vale uma hora; repita o
+`token-operador` (sem `-criar`) para renovar. Para ver as mensagens publicadas:
+`gcloud pubsub subscriptions pull svv-dev-sistema-central --auto-ack --limit=10`.
+
+## 7. Custos
 
 Os serviços usados têm camada gratuita generosa para o volume deste trabalho. Os pontos de
 atenção são os testes de carga (Sprint 10) e instâncias mínimas da função, se habilitadas. O
 orçamento do bootstrap avisa por e-mail; ele **não** bloqueia gastos.
 
-## 7. Verificação
+## 8. Verificação
 
 ```bash
 make verificar
@@ -117,7 +143,7 @@ make verificar
 
 Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais GCP.
 
-## 8. Problemas comuns
+## 9. Problemas comuns
 
 | Sintoma | Causa provável | Ação |
 |---|---|---|
@@ -129,3 +155,4 @@ Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais
 | `Error 403: ... requires a quota project` ao criar o orçamento | Provider sem `user_project_override` e `billing_project` com credenciais de usuário | Já corrigido em `infra/bootstrap/main.tf`; se aparecer em outra API, adicionar as mesmas duas linhas ao provider |
 | Projeto criado via `gcloud` não aparece em "Adicionar projeto" do Firebase; `google_firebase_project` falha com `403 The caller does not have permission` | Elegibilidade do projeto no Firebase (causa não documentada pelo Google; permissões e políticas estavam corretas) | Criar o projeto pelo console do Firebase e vincular o faturamento depois (ADR-0010) |
 | `Database ID '(default)' is not available ... retry in N seconds` logo após um `destroy` | O Firestore reserva o ID do banco excluído por ~5 minutos | Aguardar e repetir `make infra-dev-apply` |
+| `Reauthentication failed. cannot prompt during non-interactive execution` em qualquer `gcloud` | A conta do Workspace (`alunos.utfpr.edu.br`) tem política de sessão; a credencial de usuário expira periodicamente. As credenciais do Terraform (ADC) expiram separadamente | Repetir `gcloud auth login` (e, se o Terraform também falhar, `gcloud auth application-default login`) |

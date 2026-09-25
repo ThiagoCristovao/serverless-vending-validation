@@ -1,6 +1,7 @@
 # =============================================================================
 # Segredos e credenciais — NUNCA versionar
 # =============================================================================
+chaves/
 .env
 .env.*
 !.env.example
@@ -33,6 +34,7 @@ firebase-debug.*.log
 backend.hcl
 !backend.hcl.example
 *.tfplan
+**/.build/
 crash.log
 crash.*.log
 override.tf

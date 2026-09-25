@@ -8,6 +8,11 @@ output "conta_gateway_email" {
   value       = google_service_account.gateway.email
 }
 
+output "conta_scheduler_email" {
+  description = "E-mail da conta de serviço do Cloud Scheduler."
+  value       = google_service_account.scheduler.email
+}
+
 output "conta_central_email" {
   description = "E-mail da conta de serviço do sistema central simulado."
   value       = google_service_account.central_simulado.email

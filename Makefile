@@ -32,6 +32,7 @@ endif
 
 .PHONY: ajuda configurar verificar infra-formatar infra-formatar-verificar infra-validar api-lint \
         servico-formatar servico-formatar-verificar servico-verificar servico-cobertura \
+        servico-integracao servico-local emuladores-subir emuladores-parar \
         infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
         infra-dev-init infra-dev-plan infra-dev-apply segredo-hmac-gerar app-google-services
 
@@ -71,6 +72,18 @@ servico-verificar: ## go vet e testes de unidade do serviço (rodam sem rede)
 
 servico-cobertura: ## Testes do serviço com relatório de cobertura por pacote
 	cd servico && go test ./... -count=1 -coverpkg=./... -coverprofile=coverage.out && go tool cover -func=coverage.out | tail -1
+
+servico-local: ## Executa o serviço localmente com dados em memória (porta 8080)
+	cd servico && go run ./cmd/local
+
+emuladores-subir: ## Sobe os emuladores do Firestore (8081) e do Pub/Sub (8085) em Docker
+	docker compose -f ferramentas/emuladores/docker-compose.yml up -d
+
+emuladores-parar: ## Para os emuladores
+	docker compose -f ferramentas/emuladores/docker-compose.yml down
+
+servico-integracao: ## Testes de integração contra os emuladores (exige make emuladores-subir)
+	cd servico && FIRESTORE_EMULATOR_HOST=localhost:8081 PUBSUB_EMULATOR_HOST=localhost:8085 go test -tags integracao ./internal/adaptadores/... -count=1
 
 infra-bootstrap-init: ## Inicializa o bootstrap (estado local, roda uma vez por projeto)
 	$(TERRAFORM) -chdir=infra/bootstrap init -input=false

@@ -37,3 +37,13 @@ output "google_services_json" {
   value       = module.autenticacao.google_services_json
   sensitive   = true
 }
+
+output "funcao_url" {
+  description = "URL direta do serviço Cloud Run da função (invocável só por contas autorizadas)."
+  value       = module.funcao.url
+}
+
+output "gateway_hostname" {
+  description = "Host do API Gateway; o aplicativo chama https://<host>/v1/..."
+  value       = module.gateway.hostname
+}

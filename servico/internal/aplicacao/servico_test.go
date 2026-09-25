@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ThiagoCristovao/serverless-vending-validation/servico/internal/adaptadores/memoria"
+	"github.com/ThiagoCristovao/serverless-vending-validation/servico/internal/adaptadores/sistema"
 	"github.com/ThiagoCristovao/serverless-vending-validation/servico/internal/aplicacao"
 	"github.com/ThiagoCristovao/serverless-vending-validation/servico/internal/dominio"
 )
@@ -55,7 +56,7 @@ func novoAmbiente(t *testing.T) *ambiente {
 		Maquinas: arm, Operadores: arm, Chaves: arm, Validacoes: arm,
 		Publicador:   publicador,
 		Relogio:      rel,
-		Ids:          memoria.GeradorUlid{Relogio: rel},
+		Ids:          sistema.GeradorUlid{Relogio: rel},
 		Contrassenha: gerador,
 		Registrador:  slog.New(slog.NewTextHandler(io.Discard, nil)),
 	})

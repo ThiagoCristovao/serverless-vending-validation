@@ -81,7 +81,7 @@ sequenceDiagram
   Op->>App: Lê o QR
   App->>App: Validação local
   App->>GW: POST /v1/validacoes (JWT, Idempotency-Key)
-  GW->>Fn: Encaminha (X-Apigw-Api-Userinfo)
+  GW->>Fn: Encaminha (X-Apigateway-Api-Userinfo)
   Fn->>FS: Transação: cria validação aberta
   Fn->>Fn: Deriva contrassenha e próxima (HMAC)
   Fn->>PS: validacao.iniciada
@@ -113,7 +113,7 @@ Versão completa em [diagramas/sequencia-principal.mmd](diagramas/sequencia-prin
 | Aplicativo | Credenciais via SDK do Firebase; renova o ID token antes de cada chamada | Volta ao login |
 | API Gateway | Assinatura do JWT (JWKS do Firebase), `iss = https://securetoken.google.com/<PROJETO_ID>`, `aud = <PROJETO_ID>`, `exp` | `401`, a função não é invocada |
 | IAM da função | O invocador é a conta de serviço do gateway (`roles/run.invoker`); nenhum acesso público | `403` do IAM |
-| Adaptador HTTP | Presença e forma do cabeçalho `X-Apigw-Api-Userinfo`; extrai `uid` | `401` |
+| Adaptador HTTP | Presença e forma do cabeçalho `X-Apigateway-Api-Userinfo`; extrai `uid` | `401` |
 | Domínio | Operador existe e está `ativo`; em consultas, é o dono da validação | `403 operador_nao_autorizado` |
 
 Contas de serviço e papéis: [`infra/modulos/iam/README.md`](../infra/modulos/iam/README.md).

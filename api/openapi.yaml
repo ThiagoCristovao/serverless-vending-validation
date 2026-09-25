@@ -1,16 +1,15 @@
-openapi: 3.1.0
+openapi: 3.0.3
 
 info:
   title: Serviço de Validação de Máquinas de Vending (SVV)
   version: 0.2.0
-  summary: Validação remota de máquinas de vending offline por operadores de campo.
   description: |
     Contrato canônico do serviço de validação (ADR-0006). Usado para documentação, geração de
     código do servidor (Go) e do cliente (Dart) e como configuração do API Gateway.
 
     **Autenticação.** Todas as operações exigem um ID token do Firebase Authentication no cabeçalho
     `Authorization: Bearer <jwt>`. O API Gateway valida assinatura, emissor e audiência e encaminha
-    as claims à função no cabeçalho `X-Apigw-Api-Userinfo`. Requisições sem token válido recebem
+    as claims à função no cabeçalho `X-Apigateway-Api-Userinfo`. Requisições sem token válido recebem
     `401` do gateway, sem chegar ao serviço.
 
     **Erros.** Seguem a RFC 9457 (`application/problem+json`) com as extensões `codigo` e
@@ -22,18 +21,19 @@ info:
     Marcadores `PROJETO_ID` e `URL_DA_FUNCAO` são substituídos pelo Terraform (módulo `gateway`).
   license:
     name: GPL-3.0-or-later
-    identifier: GPL-3.0-or-later
+    url: https://www.gnu.org/licenses/gpl-3.0.html
   contact:
     name: Thiago Cristovão de Souza
     url: https://github.com/ThiagoCristovao/serverless-vending-validation
 
+# O API Gateway ignora o caminho de `servers`; por isso o prefixo /v1 está explícito nos paths.
 servers:
-  - url: https://{gateway}/v1
-    description: API Gateway (us-east1). O host é saída do Terraform.
+  - url: https://{gateway}
+    description: Host do API Gateway do ambiente (saída `gateway_hostname` do Terraform).
     variables:
       gateway:
         default: svv-dev-gateway.exemplo.invalid
-        description: Hostname do API Gateway do ambiente.
+        description: Hostname do gateway.
 
 tags:
   - name: validacoes
@@ -42,15 +42,20 @@ tags:
 security:
   - firebaseJwt: []
 
-# Roteamento do API Gateway para a Cloud Run function (preenchido pelo Terraform na Sprint 5).
-x-google-backend:
-  address: URL_DA_FUNCAO
-  jwt_audience: URL_DA_FUNCAO
-  path_translation: APPEND_PATH_TO_ADDRESS
-  deadline: 30.0
+# Roteamento do API Gateway para a Cloud Run function (marcadores preenchidos pelo Terraform).
+# Em OpenAPI 3.x os backends são declarados aqui e referenciados por nome em x-google-backend.
+x-google-api-management:
+  backends:
+    funcao:
+      address: URL_DA_FUNCAO
+      jwtAudience: URL_DA_FUNCAO
+      pathTranslation: APPEND_PATH_TO_ADDRESS
+      protocol: http/1.1
+      deadline: 30.0
+x-google-backend: funcao
 
 paths:
-  /validacoes:
+  /v1/validacoes:
     post:
       tags: [validacoes]
       operationId: iniciarValidacao
@@ -113,7 +118,7 @@ paths:
         '503':
           $ref: '#/components/responses/Indisponivel'
 
-  /validacoes/{idValidacao}:
+  /v1/validacoes/{idValidacao}:
     parameters:
       - $ref: '#/components/parameters/IdValidacao'
     get:
@@ -145,7 +150,7 @@ paths:
         '503':
           $ref: '#/components/responses/Indisponivel'
 
-  /validacoes/{idValidacao}/conclusao:
+  /v1/validacoes/{idValidacao}/conclusao:
     parameters:
       - $ref: '#/components/parameters/IdValidacao'
     post:
@@ -210,15 +215,22 @@ paths:
 components:
   securitySchemes:
     firebaseJwt:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      type: oauth2
       description: |
-        ID token emitido pelo Firebase Authentication. Validado pelo API Gateway com as extensões
-        abaixo; a função confia apenas nas claims recebidas em `X-Apigw-Api-Userinfo`.
-      x-google-issuer: https://securetoken.google.com/PROJETO_ID
-      x-google-jwks_uri: https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com
-      x-google-audiences: PROJETO_ID
+        ID token do Firebase Authentication, enviado em `Authorization: Bearer <token>`. O API
+        Gateway valida assinatura, emissor e audiência com a extensão `x-google-auth` (forma exigida
+        para documentos OpenAPI 3.x) e repassa as claims à função no cabeçalho
+        `X-Apigateway-Api-Userinfo` (payload do JWT em base64url). A função confia apenas nesse
+        cabeçalho.
+      flows:
+        implicit:
+          authorizationUrl: https://securetoken.google.com/PROJETO_ID
+          scopes: {}
+      x-google-auth:
+        issuer: https://securetoken.google.com/PROJETO_ID
+        jwksUri: https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com
+        audiences:
+          - PROJETO_ID
 
   parameters:
     IdempotencyKey:
@@ -229,7 +241,7 @@ components:
       schema:
         type: string
         format: uuid
-        examples: ['6f1c2a4e-3b7d-4e8f-9a0b-1c2d3e4f5a6b']
+        example: 6f1c2a4e-3b7d-4e8f-9a0b-1c2d3e4f5a6b
     IdValidacao:
       name: idValidacao
       in: path
@@ -243,13 +255,13 @@ components:
       type: string
       description: ULID de 26 caracteres, ordenável por tempo.
       pattern: '^[0-9A-HJKMNP-TV-Z]{26}$'
-      examples: ['01J8ZK3V9Q7XW2N4M6P8R0T2Y4']
+      example: 01J8ZK3V9Q7XW2N4M6P8R0T2Y4
 
     Contrassenha:
       type: string
       description: Código supervisor de 4 dígitos, com zeros à esquerda (ADR-0002).
       pattern: '^[0-9]{4}$'
-      examples: ['4729']
+      example: '4729'
 
     PayloadQr:
       type: object
@@ -259,7 +271,7 @@ components:
       properties:
         v:
           type: integer
-          const: 1
+          enum: [1]
           description: Versão do esquema do payload.
         maq:
           type: string
@@ -334,7 +346,8 @@ components:
         localizacao:
           $ref: '#/components/schemas/Localizacao'
         ultimaValidacaoEm:
-          type: [string, 'null']
+          type: string
+          nullable: true
           format: date-time
           description: Instante da última validação concluída, ou nulo se nunca validada.
 
@@ -377,7 +390,8 @@ components:
           format: date-time
           description: Prazo para concluir a validação (RN-04).
         concluidaEm:
-          type: [string, 'null']
+          type: string
+          nullable: true
           format: date-time
         maquina:
           $ref: '#/components/schemas/Maquina'
@@ -413,7 +427,7 @@ components:
           $ref: '#/components/schemas/IdValidacao'
         status:
           type: string
-          const: concluida
+          enum: [concluida]
         concluidaEm:
           type: string
           format: date-time
