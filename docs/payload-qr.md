@@ -73,8 +73,8 @@ correção de erro **M**, cabe em um QR versão 11 (61×61 módulos). Com corre�
 adesivos sujeitos a desgaste), versão 13. Impresso a 4 cm de lado, é lido confortavelmente a
 20–40 cm.
 
-> **TODO (Sprint 5, ferramenta gerar-qr):** medir leitura em dispositivo físico com correção M e Q e
-> registrar o resultado aqui.
+Verificação prevista na Sprint 5, com a ferramenta `gerar-qr`: medir a leitura em dispositivo físico
+com correção M e Q e registrar o resultado nesta seção.
 
 ## 6. Evolução
 

@@ -48,6 +48,7 @@ type EventoValidacao struct {
 	ConcluidaEm       *time.Time `json:"concluidaEm,omitempty"`
 	Leituras          *Leituras  `json:"leituras,omitempty"`
 	CodigoRotacionado *bool      `json:"codigoRotacionado,omitempty"`
+	Avisos            []Aviso    `json:"avisos,omitempty"`
 }
 
 // NovoEventoIniciada monta o evento validacao.iniciada.
@@ -82,6 +83,7 @@ func NovoEventoConcluida(v *Validacao, m *Maquina, o *Operador) Evento {
 			ConcluidaEm:       v.ConcluidaEm,
 			Leituras:          v.Leituras,
 			CodigoRotacionado: v.CodigoRotacionado,
+			Avisos:            v.Avisos,
 		},
 	}
 }

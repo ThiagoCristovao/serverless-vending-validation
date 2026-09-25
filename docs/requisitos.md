@@ -2,7 +2,8 @@
 
 **Sprint 1 — Requisitos e modelagem de dados.** Documento consolidado de requisitos do ecossistema
 de validação. Deriva do fluxo da Figura 1 do TCC 1 e das decisões registradas em [adr/](adr/).
-Lacunas estão marcadas com `> **TODO:**`.
+As lacunas deixadas pelo TCC 1 foram fechadas em 2026-09-25 (PR "Sprints 1 e 2: fechar lacunas");
+os alvos numéricos são propostas do autor, a apresentar ao orientador na revisão seguinte.
 
 Critério de conclusão da sprint: todo campo trafegado entre os componentes tem tipo,
 obrigatoriedade e origem definidos ([payload-qr.md](payload-qr.md), [modelo-dados.md](modelo-dados.md),
@@ -91,8 +92,8 @@ Prioridade: **E** essencial (sem ele o fluxo não fecha), **I** importante, **D*
 | RNF-02 | Resiliência | Eventos que falham repetidamente não bloqueiam os demais | DLQ após 5 tentativas; consumo dos outros continua | Sprint 8 |
 | RNF-03 | Independência | Validação e conclusão completam com o sistema central indisponível | 0 requisições com erro atribuível ao sistema central | Sprint 9 |
 | RNF-04 | Independência | A resposta da validação não depende da publicação no Pub/Sub | Persistência precede a publicação; falha de publicação não gera erro ao operador | Sprint 5/9 (ver CE-14) |
-| RNF-05 | Escalabilidade | O serviço atende operadores simultâneos sem degradação perceptível | p95 da latência do serviço abaixo do alvo com N operadores simultâneos. `> **TODO:** definir N (sugestão: 10, 50, 100) e alvo de p95 (sugestão: 500 ms) com o orientador` | Sprint 10, teste de carga |
-| RNF-06 | Tempo de resposta | Cold start aceitável para uso em campo | `> **TODO:** alvo de cold start (sugestão: < 1,5 s) e de regime contínuo (sugestão: p50 < 200 ms)` | Sprint 10 |
+| RNF-05 | Escalabilidade | O serviço atende operadores simultâneos sem degradação perceptível | p95 da latência do serviço (medida no gateway) ≤ 500 ms com 10, 50 e 100 operadores simultâneos, com escala automática de instâncias | Sprint 10, teste de carga |
+| RNF-06 | Tempo de resposta | Cold start aceitável para uso em campo | Cold start (primeira requisição após inatividade) ≤ 1,5 s; regime contínuo com p50 ≤ 200 ms e p95 ≤ 500 ms | Sprint 10 |
 | RNF-07 | Segurança | Somente operadores autenticados acessam o serviço | Requisição sem JWT válido é rejeitada pelo gateway (401) antes de chegar à função | Sprint 5 |
 | RNF-08 | Segurança | A função não é invocável publicamente | Somente a conta de serviço do gateway tem `run.invoker`; chamada direta devolve 403 | Sprint 5 |
 | RNF-09 | Segurança | Menor privilégio para cada conta de serviço | Papéis conforme módulo `iam`; nenhum `Editor`/`Owner` em contas de serviço | Sprint 3 |
@@ -103,7 +104,7 @@ Prioridade: **E** essencial (sem ele o fluxo não fecha), **I** importante, **D*
 | RNF-14 | Reprodutibilidade | Ambiente recriável do zero por Terraform | `destroy` + `apply` sem intervenção manual | Sprint 3 |
 | RNF-15 | Testabilidade | Regras de domínio testáveis sem nuvem | `go test ./...` sem rede | Sprint 4 |
 | RNF-16 | Usabilidade em campo | Fluxo em no máximo três telas; contrassenha legível; feedback em cada estado | Revisão de telas; teste em dispositivo | Sprint 7 |
-| RNF-17 | Compatibilidade | Android como plataforma-alvo | `> **TODO:** versão mínima do Android (sugestão: API 26)` | Sprint 6 |
+| RNF-17 | Compatibilidade | Android como plataforma-alvo | Android 8.0 (API 26) ou superior | Sprint 6 |
 | RNF-18 | Custo | Gasto mensal controlado | Orçamento com alertas; `max_instance_count` na função | Sprint 0/5 |
 
 ## 6. Regras de negócio
@@ -113,10 +114,10 @@ Prioridade: **E** essencial (sem ele o fluxo não fecha), **I** importante, **D*
 | RN-01 | A contrassenha é o código supervisor de 4 dígitos da máquina, derivado por HMAC de `(idMaquina, contador)` (ADR-0002). |
 | RN-02 | A próxima contrassenha é derivada de `contador + 1` e só passa a valer quando a conclusão informa `codigoRotacionado = true`. |
 | RN-03 | Uma máquina tem no máximo uma validação `aberta` por vez. |
-| RN-04 | Uma validação aberta expira em **15 minutos** (`> **TODO:** confirmar com orientador`); depois disso não pode ser concluída. |
+| RN-04 | Uma validação aberta expira em **15 minutos**; depois disso não pode ser concluída. |
 | RN-05 | O QR é válido apenas até `exp` (validade do adesivo) e apenas se assinado por uma chave `kid` ativa. |
 | RN-06 | Só operadores com `ativo = true` podem validar. |
-| RN-07 | Leituras operacionais são inteiros não negativos; o medidor não pode ser menor que o da última validação concluída da mesma máquina (`> **TODO:** decidir se é erro 422 ou apenas aviso`). |
+| RN-07 | Leituras operacionais são inteiros não negativos. Um medidor menor que o da última validação concluída da mesma máquina é **aceito com o aviso** `medidor_menor_que_anterior`, devolvido ao operador e registrado no evento, porque o medidor pode ser zerado em manutenção (ADR-0011). |
 | RN-08 | Modelos suportados nesta versão: `CN168`. |
 
 ## 7. Restrições e premissas

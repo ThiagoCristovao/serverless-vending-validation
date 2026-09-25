@@ -2,7 +2,7 @@ openapi: 3.1.0
 
 info:
   title: Serviço de Validação de Máquinas de Vending (SVV)
-  version: 0.1.0
+  version: 0.2.0
   summary: Validação remota de máquinas de vending offline por operadores de campo.
   description: |
     Contrato canônico do serviço de validação (ADR-0006). Usado para documentação, geração de
@@ -187,6 +187,7 @@ paths:
                     status: concluida
                     concluidaEm: '2026-09-17T13:19:44Z'
                     codigoRotacionado: true
+                    avisos: []
         '400':
           $ref: '#/components/responses/RequisicaoInvalida'
         '401':
@@ -384,6 +385,11 @@ components:
           $ref: '#/components/schemas/Leituras'
         codigoRotacionado:
           type: boolean
+        avisos:
+          type: array
+          description: Condições aceitas na conclusão, mas dignas de atenção (RN-07).
+          items:
+            $ref: '#/components/schemas/Aviso'
 
     ConcluirValidacaoRequisicao:
       type: object
@@ -413,6 +419,20 @@ components:
           format: date-time
         codigoRotacionado:
           type: boolean
+        avisos:
+          type: array
+          description: Condições aceitas na conclusão, mas dignas de atenção; vazio quando não há nenhuma.
+          items:
+            $ref: '#/components/schemas/Aviso'
+
+    Aviso:
+      type: string
+      description: |
+        Aviso registrado na conclusão. `medidor_menor_que_anterior`: o medidor informado é menor que
+        o da última validação concluída da mesma máquina; aceito porque o medidor pode ser zerado em
+        manutenção (RN-07, ADR-0011).
+      enum:
+        - medidor_menor_que_anterior
 
     Problema:
       type: object

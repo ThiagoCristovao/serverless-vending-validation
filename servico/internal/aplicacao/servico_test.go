@@ -37,6 +37,8 @@ func novoAmbiente(t *testing.T) *ambiente {
 	arm := memoria.Novo()
 	arm.SemearMaquina(dominio.Maquina{Id: "VM-2047", Modelo: "CN168", Localizacao: dominio.Localizacao{Id: "BLA-T", Nome: "Bloco A - Térreo"}, Ativa: true, ContadorCodigo: 12, CriadaEm: inicio, AtualizadaEm: inicio})
 	arm.SemearMaquina(dominio.Maquina{Id: "VM-0009", Modelo: "CN168", Localizacao: dominio.Localizacao{Id: "BLB-1", Nome: "Bloco B"}, Ativa: false})
+	medidorAnterior := int64(20000)
+	arm.SemearMaquina(dominio.Maquina{Id: "VM-3000", Modelo: "CN168", Localizacao: dominio.Localizacao{Id: "BLC-1", Nome: "Bloco C"}, Ativa: true, ContadorCodigo: 3, UltimoMedidor: &medidorAnterior})
 	arm.SemearOperador(dominio.Operador{Uid: "op-1", Nome: "Operador Um", Ativo: true})
 	arm.SemearOperador(dominio.Operador{Uid: "op-2", Nome: "Operador Dois", Ativo: true})
 	arm.SemearOperador(dominio.Operador{Uid: "op-inativo", Nome: "Inativo", Ativo: false})
@@ -307,6 +309,30 @@ func TestSemRotacaoMantemCodigos(t *testing.T) {
 	r2 := amb.iniciarOk("op-1", "chave-2", amb.payload(nil))
 	if r2.Contrassenha != r.Contrassenha {
 		t.Fatal("sem rotação, a visita seguinte deve devolver o mesmo código")
+	}
+}
+
+func TestMedidorMenorQueAnteriorGeraAviso(t *testing.T) {
+	amb := novoAmbiente(t)
+	outraMaquina := func(p *dominio.PayloadQr) { p.Maq = "VM-3000"; p.Loc = "BLC-1" }
+
+	r := amb.iniciarOk("op-1", "chave-1", amb.payload(outraMaquina))
+	c := amb.concluirOk("op-1", r.Validacao.Id, dominio.Leituras{Medidor: 14832, UnidadesVendidas: 10}, true)
+	if len(c.Validacao.Avisos) != 1 || c.Validacao.Avisos[0] != dominio.AvisoMedidorMenorQueAnterior {
+		t.Fatalf("avisos = %v, esperava medidor_menor_que_anterior", c.Validacao.Avisos)
+	}
+	eventos := amb.pub.Publicados()
+	if ultimo := eventos[len(eventos)-1]; len(ultimo.Validacao.Avisos) != 1 {
+		t.Fatalf("o evento concluida deveria carregar o aviso: %+v", ultimo.Validacao)
+	}
+	if c.Maquina.UltimoMedidor == nil || *c.Maquina.UltimoMedidor != 14832 {
+		t.Fatal("a conclusão com aviso ainda atualiza o último medidor")
+	}
+
+	r2 := amb.iniciarOk("op-1", "chave-2", amb.payload(outraMaquina))
+	c2 := amb.concluirOk("op-1", r2.Validacao.Id, dominio.Leituras{Medidor: 15000, UnidadesVendidas: 10}, true)
+	if len(c2.Validacao.Avisos) != 0 {
+		t.Fatalf("medidor maior não deve gerar aviso: %v", c2.Validacao.Avisos)
 	}
 }
 

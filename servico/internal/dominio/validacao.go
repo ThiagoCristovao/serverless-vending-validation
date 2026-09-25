@@ -34,6 +34,14 @@ func (l Leituras) Validar() error {
 	return nil
 }
 
+// Aviso sinaliza uma condição aceita na conclusão, mas digna de atenção do
+// operador e do sistema central (ADR-0011).
+type Aviso string
+
+// AvisoMedidorMenorQueAnterior: o medidor informado é menor que o da última
+// validação concluída da mesma máquina (RN-07).
+const AvisoMedidorMenorQueAnterior Aviso = "medidor_menor_que_anterior"
+
 // Dispositivo são metadados do aparelho do operador, só para diagnóstico.
 type Dispositivo struct {
 	Plataforma string
@@ -79,6 +87,7 @@ type Validacao struct {
 	Leituras          *Leituras
 	CodigoRotacionado *bool
 	Observacoes       string
+	Avisos            []Aviso
 
 	Eventos EventosPublicados
 }
@@ -131,8 +140,6 @@ func (v *Validacao) Concluir(leituras Leituras, codigoRotacionado bool, observac
 	if utf8.RuneCountInString(observacoes) > TamanhoMaximoObservacoes {
 		return NovoErro(CodigoPayloadInvalido, "observações excedem o tamanho máximo")
 	}
-	// TODO (RN-07, decidir com o orientador): medidor menor que o da última
-	// validação concluída da máquina — erro ou apenas aviso?
 	quando := agora
 	v.Status = StatusConcluida
 	v.ConcluidaEm = &quando
@@ -140,6 +147,17 @@ func (v *Validacao) Concluir(leituras Leituras, codigoRotacionado bool, observac
 	v.CodigoRotacionado = &codigoRotacionado
 	v.Observacoes = observacoes
 	return nil
+}
+
+// RegistrarAvisos compara as leituras da conclusão com o histórico da máquina
+// e registra os avisos cabíveis (RN-07). Um medidor menor que o anterior é
+// aceito, porque a máquina pode ter sido zerada em manutenção, mas fica
+// sinalizado para o operador e para o sistema central.
+func (v *Validacao) RegistrarAvisos(m *Maquina) {
+	v.Avisos = nil
+	if v.Leituras != nil && m != nil && m.UltimoMedidor != nil && v.Leituras.Medidor < *m.UltimoMedidor {
+		v.Avisos = append(v.Avisos, AvisoMedidorMenorQueAnterior)
+	}
 }
 
 // MesmaConclusao informa se a conclusão já registrada coincide com a

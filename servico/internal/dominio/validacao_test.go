@@ -80,6 +80,44 @@ func TestValidacao_ExpiradaNaoConclui(t *testing.T) {
 	}
 }
 
+func TestValidacao_RegistrarAvisos(t *testing.T) {
+	novaConcluida := func(medidor int64) *Validacao {
+		v := NovaValidacao("01J8ZK3V9Q7XW2N4M6P8R0T2Y4", fixtureMaquina(), fixtureOperador(), fixturePayload(), "chave-1", nil, instante, 0)
+		if err := v.Concluir(Leituras{Medidor: medidor, UnidadesVendidas: 1}, true, "", instante); err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	semHistorico := fixtureMaquina()
+	anterior := int64(20000)
+	comHistorico := fixtureMaquina()
+	comHistorico.UltimoMedidor = &anterior
+
+	casos := []struct {
+		nome    string
+		maquina *Maquina
+		medidor int64
+		avisos  int
+	}{
+		{"sem histórico", semHistorico, 100, 0},
+		{"medidor menor que o anterior", comHistorico, 19999, 1},
+		{"medidor igual ao anterior", comHistorico, 20000, 0},
+		{"medidor maior que o anterior", comHistorico, 20001, 0},
+	}
+	for _, c := range casos {
+		t.Run(c.nome, func(t *testing.T) {
+			v := novaConcluida(c.medidor)
+			v.RegistrarAvisos(c.maquina)
+			if len(v.Avisos) != c.avisos {
+				t.Fatalf("avisos = %v, esperava %d", v.Avisos, c.avisos)
+			}
+			if c.avisos == 1 && v.Avisos[0] != AvisoMedidorMenorQueAnterior {
+				t.Fatalf("aviso inesperado: %s", v.Avisos[0])
+			}
+		})
+	}
+}
+
 func TestMaquina_SemRotacaoMantemContador(t *testing.T) {
 	m := fixtureMaquina()
 	v := NovaValidacao("01J8ZK3V9Q7XW2N4M6P8R0T2Y4", m, fixtureOperador(), fixturePayload(), "chave-1", nil, instante, 0)
