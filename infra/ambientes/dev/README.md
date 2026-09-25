@@ -4,7 +4,7 @@ Raiz Terraform do ambiente `dev`. Compõe os módulos de [`infra/modulos`](../..
 estado remoto no bucket criado pelo [bootstrap](../../bootstrap) (prefixo `ambientes/dev`).
 
 Sprint 3 (implementada): `iam`, `autenticacao`, `firestore`, `pubsub`, `observabilidade`.
-Sprint 5 (comentada em `main.tf`): `funcao`, `gateway`.
+Sprint 5 (implementada): `funcao` (função e job de reconciliação) e `gateway`.
 
 Outros ambientes (`homolog`, `prod`) seguem o mesmo padrão em diretórios irmãos, com `prefix`
 próprio no backend e `protecao_exclusao = true` no Firestore.

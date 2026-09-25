@@ -10,7 +10,7 @@ info:
 
     **Autenticação.** Todas as operações exigem um ID token do Firebase Authentication no cabeçalho
     `Authorization: Bearer <jwt>`. O API Gateway valida assinatura, emissor e audiência e encaminha
-    as claims à função no cabeçalho `X-Apigw-Api-Userinfo`. Requisições sem token válido recebem
+    as claims à função no cabeçalho `X-Apigateway-Api-Userinfo`. Requisições sem token válido recebem
     `401` do gateway, sem chegar ao serviço.
 
     **Erros.** Seguem a RFC 9457 (`application/problem+json`) com as extensões `codigo` e
@@ -28,12 +28,8 @@ info:
     url: https://github.com/ThiagoCristovao/serverless-vending-validation
 
 servers:
-  - url: https://{gateway}/v1
-    description: API Gateway (us-east1). O host é saída do Terraform.
-    variables:
-      gateway:
-        default: svv-dev-gateway.exemplo.invalid
-        description: Hostname do API Gateway do ambiente.
+  - url: /v1
+    description: Caminho base sob o host do API Gateway (saída `gateway_hostname` do Terraform).
 
 tags:
   - name: validacoes
@@ -210,15 +206,22 @@ paths:
 components:
   securitySchemes:
     firebaseJwt:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      type: oauth2
       description: |
-        ID token emitido pelo Firebase Authentication. Validado pelo API Gateway com as extensões
-        abaixo; a função confia apenas nas claims recebidas em `X-Apigw-Api-Userinfo`.
-      x-google-issuer: https://securetoken.google.com/PROJETO_ID
-      x-google-jwks_uri: https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com
-      x-google-audiences: PROJETO_ID
+        ID token do Firebase Authentication, enviado em `Authorization: Bearer <token>`. O API
+        Gateway valida assinatura, emissor e audiência com a extensão `x-google-auth` (forma exigida
+        para documentos OpenAPI 3.x) e repassa as claims à função no cabeçalho
+        `X-Apigateway-Api-Userinfo` (payload do JWT em base64url). A função confia apenas nesse
+        cabeçalho.
+      flows:
+        implicit:
+          authorizationUrl: https://securetoken.google.com/PROJETO_ID
+          scopes: {}
+      x-google-auth:
+        issuer: https://securetoken.google.com/PROJETO_ID
+        jwksUri: https://www.googleapis.com/service_accounts/v1/metadata/x509/securetoken@system.gserviceaccount.com
+        audiences:
+          - PROJETO_ID
 
   parameters:
     IdempotencyKey:

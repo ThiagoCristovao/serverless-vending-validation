@@ -67,25 +67,32 @@ module "observabilidade" {
 }
 
 # --- Sprint 5: função e gateway ------------------------------------------------
-#
-# module "funcao" {
-#   source = "../../modulos/funcao"
-#
-#   projeto_id          = var.projeto_id
-#   regiao              = var.regiao
-#   prefixo             = local.prefixo
-#   conta_funcao_email  = module.iam.conta_funcao_email
-#   conta_gateway_email = module.iam.conta_gateway_email
-#   topico_validacoes   = module.pubsub.topico_validacoes_nome
-#   segredo_hmac_id     = module.iam.segredo_hmac_id
-# }
-#
-# module "gateway" {
-#   source = "../../modulos/gateway"
-#
-#   projeto_id          = var.projeto_id
-#   regiao              = var.regiao
-#   prefixo             = local.prefixo
-#   conta_gateway_email = module.iam.conta_gateway_email
-#   url_funcao          = module.funcao.url
-# }
+
+module "funcao" {
+  source = "../../modulos/funcao"
+
+  projeto_id            = var.projeto_id
+  regiao                = var.regiao
+  prefixo               = local.prefixo
+  codigo_fonte_dir      = "${path.root}/../../../servico"
+  conta_funcao_email    = module.iam.conta_funcao_email
+  conta_gateway_email   = module.iam.conta_gateway_email
+  conta_scheduler_email = module.iam.conta_scheduler_email
+  topico_validacoes     = module.pubsub.topico_validacoes_nome
+  segredo_hmac_nome     = module.iam.segredo_hmac_nome
+  min_instancias        = var.funcao_min_instancias
+
+  depends_on = [module.firestore, module.pubsub]
+}
+
+module "gateway" {
+  source = "../../modulos/gateway"
+
+  projeto_id           = var.projeto_id
+  regiao               = var.regiao
+  prefixo              = local.prefixo
+  conta_gateway_email  = module.iam.conta_gateway_email
+  url_funcao           = module.funcao.url
+  contrato_caminho     = "${path.root}/../../../api/openapi.yaml"
+  caminho_base_backend = var.gateway_caminho_base_backend
+}

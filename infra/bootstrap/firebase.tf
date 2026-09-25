@@ -47,6 +47,12 @@ resource "google_identity_platform_config" "principal" {
     anonymous {
       enabled = false
     }
+
+    # Declarado desligado para coincidir com o que a API devolve; sem o bloco o
+    # plan tentaria removê-lo a cada execução.
+    phone_number {
+      enabled = false
+    }
   }
 
   authorized_domains = concat(

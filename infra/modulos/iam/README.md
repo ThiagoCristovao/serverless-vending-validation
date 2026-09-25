@@ -7,6 +7,7 @@ contrassenha (só o contêiner; o valor é criado fora do Terraform com `make se
 |---|---|---|
 | `<prefixo>-funcao-validacao` | `datastore.user`, `logging.logWriter`, `monitoring.metricWriter`, `cloudtrace.agent` | `pubsub.publisher` no tópico (`pubsub`); `secretmanager.secretAccessor` no segredo (aqui) |
 | `<prefixo>-gateway` | — | `run.invoker` na função (`funcao`, Sprint 5) |
+| `<prefixo>-scheduler` | — | `run.invoker` na função, para o endpoint interno de reconciliação (`funcao`) |
 | `<prefixo>-central-simulado` | — | `pubsub.subscriber` nas assinaturas (`pubsub`) |
 
 | Entrada | Descrição | Padrão |

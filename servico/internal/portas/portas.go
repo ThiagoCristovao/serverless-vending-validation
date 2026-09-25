@@ -59,6 +59,10 @@ type RepositorioValidacoes interface {
 
 	MarcarExpirada(ctx context.Context, id string) error
 	MarcarEventoPublicado(ctx context.Context, id string, tipo dominio.TipoEvento, quando time.Time) error
+
+	// PublicacoesPendentes lista validações com evento por publicar (marcador
+	// nulo), ocorridas antes de antesDe, até limite itens (ADR-0012).
+	PublicacoesPendentes(ctx context.Context, antesDe time.Time, limite int) ([]*dominio.Validacao, error)
 }
 
 // PublicadorEventos envia eventos ao sistema central.

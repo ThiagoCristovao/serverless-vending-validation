@@ -18,6 +18,13 @@ resource "google_service_account" "gateway" {
   description  = "Identidade com que o API Gateway invoca a função (roles/run.invoker concedido no módulo funcao)."
 }
 
+resource "google_service_account" "scheduler" {
+  project      = var.projeto_id
+  account_id   = "${var.prefixo}-scheduler"
+  display_name = "Cloud Scheduler (reconciliação)"
+  description  = "Identidade com que o Cloud Scheduler chama o endpoint interno de reconciliação (roles/run.invoker concedido no módulo funcao)."
+}
+
 resource "google_service_account" "central_simulado" {
   project      = var.projeto_id
   account_id   = "${var.prefixo}-central-simulado"

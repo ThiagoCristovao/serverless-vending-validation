@@ -54,6 +54,7 @@ locals {
     "firebaserules.googleapis.com",
     "identitytoolkit.googleapis.com",
     "secretmanager.googleapis.com",
+    "cloudscheduler.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "cloudtrace.googleapis.com",

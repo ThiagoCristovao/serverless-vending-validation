@@ -26,7 +26,7 @@ flowchart TB
   APP -->|"1. login"| FA
   FA -->|"2. ID token (JWT)"| APP
   APP -->|"3. HTTPS + Bearer JWT<br/>Idempotency-Key"| GW
-  GW -->|"4. invoca com identidade própria<br/>X-Apigw-Api-Userinfo"| FN
+  GW -->|"4. invoca com identidade própria<br/>X-Apigateway-Api-Userinfo"| FN
   FN <-->|"5. transações"| FS
   FN -->|"lê chave"| SM
   FN -->|"6. publica eventos<br/>chave de ordenação idMaquina"| PS
