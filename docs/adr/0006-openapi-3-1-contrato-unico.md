@@ -1,6 +1,6 @@
-# ADR-0006: Um único contrato OpenAPI 3.1 para documentação, geração de código e API Gateway
+# ADR-0006: Um único contrato OpenAPI 3.0 para documentação, geração de código e API Gateway
 
-- **Status:** aceita
+- **Status:** aceita (revisada em 2026-09-25: versão 3.0.3 em vez de 3.1)
 - **Data:** 2026-09-16
 - **Decisores:** Thiago Cristovão de Souza
 - **Sprint:** 1
@@ -14,9 +14,16 @@ OpenAPI 2.0, 3.0.x e 3.1.x.
 
 ## Decisão
 
-`api/openapi.yaml` em **OpenAPI 3.1** é o contrato canônico e o único. Ele carrega as extensões
-`x-google-backend` e as extensões de JWT do esquema de segurança `firebaseJwt`, com marcadores
-(`PROJETO_ID`, URL da função) substituídos por `templatefile()` no módulo Terraform `gateway`.
+`api/openapi.yaml` em **OpenAPI 3.0.3** é o contrato canônico e o único. Ele carrega a declaração
+de backend `x-google-api-management` (referenciada por `x-google-backend`) e o esquema de segurança
+`firebaseJwt` com `x-google-auth`, com marcadores (`PROJETO_ID`, `URL_DA_FUNCAO`) substituídos por
+`replace()` no módulo Terraform `gateway`.
+
+**Revisão de 2026-09-25.** O contrato nasceu em 3.1, mas o conversor do API Gateway rejeitou duas
+construções: tipos múltiplos (`type: [string, 'null']`, próprios do 3.1) e o `x-google-backend`
+em forma de objeto (em 3.x o backend é declarado em `x-google-api-management.backends` e referenciado
+por nome). Rebaixar para 3.0.3 (`nullable: true`, `enum` no lugar de `const`, `example` no lugar de
+`examples`) resolveu sem perder expressividade relevante e mantém um único arquivo.
 Erros seguem RFC 9457 (`application/problem+json`). O lint (`redocly lint`) roda na CI.
 
 ## Alternativas consideradas
@@ -36,9 +43,8 @@ Erros seguem RFC 9457 (`application/problem+json`). O lint (`redocly lint`) roda
 
 ### Negativas e riscos
 
-- A sintaxe exata das extensões de JWT em documentos 3.x deve ser confirmada na documentação
-  "Autenticar usuários com Firebase" do API Gateway ao implantar (Sprint 5). Se algum recurso 3.1
-  não for aceito pelo gateway, a saída é rebaixar o arquivo para 3.0.x, não voltar a 2.0.
+- O conversor do gateway é mais restritivo que o lint: toda mudança de contrato deve ser aplicada
+  no ambiente dev antes do merge, porque só a criação do `api_config` valida as extensões.
 
 ## Referências
 

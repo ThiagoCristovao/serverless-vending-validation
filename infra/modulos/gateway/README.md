@@ -6,8 +6,10 @@
 
 - `google_api_gateway_api` — `svv-<amb>-api`.
 - `google_api_gateway_api_config` — gerado a partir de [`api/openapi.yaml`](../../../api/openapi.yaml)
-  com `templatefile()` substituindo `PROJETO_ID` e a URL da função; conta de serviço
-  `svv-<amb>-gateway` em `gateway_config.backend_config.google_service_account`.
+  com `replace()` substituindo `PROJETO_ID` e `URL_DA_FUNCAO`; conta de serviço `svv-<amb>-gateway` em
+  `gateway_config.backend_config.google_service_account`. O backend é declarado em
+  `x-google-api-management.backends.funcao` (endereço, `jwtAudience`, `pathTranslation`) e
+  referenciado por `x-google-backend: funcao`, forma exigida em OpenAPI 3.x.
 - `google_api_gateway_gateway` — `svv-<amb>-gateway`, região `us-east1`.
 
 **Verificação do JWT** (esquema de segurança `firebaseJwt` no contrato, forma OpenAPI 3.x):
@@ -23,3 +25,8 @@ com o payload do JWT em base64url.
 O API Gateway aceita OpenAPI 2.0, 3.0.x e 3.1.x (verificado em 2026-09-16), por isso o contrato
 canônico em 3.1 é reaproveitado sem conversão (ADR-0006). A sintaxe das extensões de JWT em 3.x foi
 confirmada em 2026-09-25 na documentação "Authenticating users with Firebase".
+
+**Caminho base.** O API Gateway ignora o caminho do bloco `servers` do contrato (só o host é
+opcional); por isso o prefixo `/v1` está explícito nos `paths`, e a função recebe o mesmo caminho
+(`pathTranslation: APPEND_PATH_TO_ADDRESS`). Verificado em 2026-09-25: sem o prefixo nos paths, o
+gateway respondia `404 The current request is not defined by this API` em `/v1/validacoes`.
