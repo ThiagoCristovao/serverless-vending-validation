@@ -46,6 +46,7 @@ Uma por visita iniciada. Nunca armazena a contrassenha em claro: guarda o `conta
 | `leituras` | map ou null | sim | conclusão | `{ medidor: integer, unidadesVendidas: integer }` |
 | `codigoRotacionado` | boolean ou null | sim | conclusão | |
 | `observacoes` | string ou null | não | conclusão | Até 500 caracteres |
+| `avisos` | array de string | não | serviço | Condições aceitas mas sinalizadas na conclusão, ex.: `medidor_menor_que_anterior` (RN-07, ADR-0011) |
 | `eventos` | map | sim | serviço | `{ iniciadaPublicadaEm: timestamp\|null, concluidaPublicadaEm: timestamp\|null }` — marcador de outbox (CE-14) |
 | `dispositivo` | map ou null | não | requisição | `{ plataforma, versaoApp }` para diagnóstico |
 
@@ -114,8 +115,10 @@ O serviço acessa com sua conta de serviço (`roles/datastore.user`), que ignora
 
 ## 5. Retenção
 
-> **TODO:** definir retenção de `validacoes` (sugestão: sem exclusão durante o trabalho; política
-> TTL do Firestore de 2 anos como recomendação para implantação real).
+Durante o trabalho nada é excluído: o volume é pequeno e o histórico completo interessa à avaliação.
+Para uma implantação real, recomenda-se a política TTL do Firestore em `validacoes` com um campo
+`expurgarEm = concluidaEm + 2 anos`, que o próprio banco aplica sem código adicional. Backups
+diários ficam retidos por 7 dias (módulo `firestore`).
 
 ## 6. Eventos publicados no Pub/Sub
 
@@ -146,7 +149,8 @@ sistema central precisa, sem consulta de volta.
     "iniciadaEm": "2026-09-17T13:05:12Z",
     "concluidaEm": "2026-09-17T13:19:44Z",
     "leituras": { "medidor": 14832, "unidadesVendidas": 137 },
-    "codigoRotacionado": true
+    "codigoRotacionado": true,
+    "avisos": []
   }
 }
 ```

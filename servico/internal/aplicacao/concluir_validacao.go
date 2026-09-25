@@ -60,9 +60,15 @@ func (s *Servico) ConcluirValidacao(ctx context.Context, e EntradaConcluirValida
 			"a validação expirou; leia o QR novamente").ComValidacao(v.Id)
 	}
 
+	// O histórico da máquina alimenta os avisos da RN-07 antes da gravação.
+	historico, err := s.dep.Maquinas.ObterMaquina(ctx, v.IdMaquina)
+	if err != nil {
+		return nil, indisponivel(err)
+	}
 	if err := v.Concluir(e.Leituras, e.CodigoRotacionado, e.Observacoes, agora); err != nil {
 		return nil, err
 	}
+	v.RegistrarAvisos(historico)
 	maquina, err := s.dep.Validacoes.Concluir(ctx, v, agora)
 	if err != nil {
 		return nil, indisponivel(err)

@@ -136,10 +136,10 @@ Semântica **at-least-once**: o consumidor é idempotente por `(idValidacao, tip
 publicação usa tempo limite curto (2 s) e uma retentativa; se falhar, a resposta ao operador é a
 mesma e o documento fica com `eventos.*PublicadaEm = null`.
 
-> **TODO (Sprint 5):** escolher o mecanismo de reconciliação das publicações pendentes: (a) Cloud
-> Scheduler chamando um endpoint interno da função que republica documentos com marcador nulo;
-> (b) segunda função disparada por Eventarc em escrita no Firestore. A alternativa (a) é a mais
-> simples e suficiente para o escopo.
+**Reconciliação (ADR-0012).** O Cloud Scheduler chama a cada 5 minutos um endpoint interno da
+função (`POST /interno/reconciliar-publicacoes`, fora do gateway, autenticado por token OIDC da
+conta de serviço do Scheduler). A função republica as validações cujo marcador de publicação está
+nulo há mais de 2 minutos e grava o marcador ao conseguir. Implementado na Sprint 5.
 
 ## 7. Persistência
 
@@ -182,7 +182,7 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
 | CE-18 | Cold start da função | Função | Latência adicional dentro do alvo (RNF-06); Go reduz; `min_instance_count = 1` avaliado como alternativa | Indicador de progresso | Sprint 10 |
 | CE-19 | Permissão de câmera negada | App | Tela explicativa com atalho para as configurações do sistema | "Precisamos da câmera para ler o código" | Sprint 6 |
 | CE-20 | Operador conclui sem programar o novo código (`codigoRotacionado = false`) | Função | Contador não incrementa; próxima validação devolve os mesmos códigos; evento registra o fato | Aviso de que o código atual continua valendo | Sprint 4 |
-| CE-21 | Medidor informado menor que o da última validação | Função | `> **TODO:** erro 422 ou aviso (RN-07)` | Pedido de confirmação | Sprint 4 |
+| CE-21 | Medidor informado menor que o da última validação | Função | Aceita a conclusão e registra o aviso `medidor_menor_que_anterior` na resposta e no evento (RN-07, ADR-0011) | Aviso visível na tela de conclusão | Sprint 4 |
 
 Diagrama dos cenários CE-15 e CE-16:
 [diagramas/sequencia-central-indisponivel.mmd](diagramas/sequencia-central-indisponivel.mmd).
@@ -221,11 +221,11 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0010](adr/0010-projeto-gcp-criado-pelo-console-firebase.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0012](adr/0012-reconciliacao-de-publicacoes-via-cloud-scheduler.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:
 
 - Região `us-east1` (ADR-0003) e Android como alvo único (ADR-0004).
-- Alvos numéricos dos RNF-05, RNF-06 e RNF-17; prazo da RN-04; comportamento da RN-07.
-- Mecanismo de reconciliação de publicações pendentes (seção 6).
+- Alvos numéricos dos RNF-05, RNF-06 e RNF-17 e prazo da RN-04, fixados pelo autor em 2026-09-25
+  ([requisitos.md](requisitos.md)); apresentar na revisão seguinte.
