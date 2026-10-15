@@ -19,18 +19,39 @@ go version && terraform version
 
 ### 1.2 FVM e Flutter
 
+O pacote do FVM traz um script `fvm` que depende do diretório `src/` ao lado dele; por isso ele é
+extraído inteiro e chamado por um invólucro em `~/.local/bin` (nada é escrito no `.zshrc`).
+
 ```bash
-curl -fsSL https://fvm.app/install.sh | bash
+URL=$(gh api repos/btwld/fvm/releases/latest --jq '.assets[] | select(.name | test("linux-x64\\.tar\\.gz$")) | .browser_download_url')
+curl -sSL "$URL" | tar -xz -C /tmp && rm -rf ~/.local/share/fvm && mv /tmp/fvm ~/.local/share/fvm
+printf '#!/bin/sh\nexec "%s/.local/share/fvm/fvm" "$@"\n' "$HOME" > ~/.local/bin/fvm && chmod +x ~/.local/bin/fvm
 cd aplicativo
-fvm install             # instala a versão de .fvmrc
+fvm install             # instala a versão de .fvmrc em ~/fvm/versions/
 fvm flutter doctor
 ```
 
-Para Android é necessário o Android SDK (via Android Studio ou `cmdline-tools`), aceitar as licenças
-com `fvm flutter doctor --android-licenses` e habilitar a depuração USB no dispositivo físico.
-Use `fvm flutter` em vez de `flutter` dentro de `aplicativo/`.
+Use `fvm flutter` em vez de `flutter` dentro de `aplicativo/`, ou os alvos `make app-*`.
 
-### 1.3 gcloud CLI
+### 1.3 Android SDK (sem Android Studio)
+
+Basta o SDK por linha de comando; o Java 21 do sistema atende ao Gradle. As licenças são aceitas de
+forma não interativa.
+
+```bash
+SDK=~/Android/Sdk; mkdir -p $SDK/cmdline-tools
+curl -sSL -o /tmp/ct.zip https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip
+unzip -q /tmp/ct.zip -d /tmp/ct && mv /tmp/ct/cmdline-tools $SDK/cmdline-tools/latest
+yes | $SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK --licenses >/dev/null
+$SDK/cmdline-tools/latest/bin/sdkmanager --sdk_root=$SDK "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"
+ln -sf $SDK/platform-tools/adb ~/.local/bin/adb
+cd aplicativo && fvm flutter config --android-sdk $SDK && fvm flutter doctor
+```
+
+No celular: ativar as opções de desenvolvedor e a depuração USB; ao conectar, autorizar o
+computador. `adb devices` deve listar o aparelho antes de `make app-executar`.
+
+### 1.4 gcloud CLI
 
 Siga a instalação via apt da
 [documentação oficial](https://cloud.google.com/sdk/docs/install#deb). Depois:
@@ -41,7 +62,7 @@ gcloud auth login
 gcloud auth application-default login   # credenciais usadas pelo Terraform
 ```
 
-### 1.4 Alternativa sem instalação (só verificação)
+### 1.5 Alternativa sem instalação (só verificação)
 
 Com Docker instalado, `make verificar` funciona sem `terraform` nem `redocly` locais: o Makefile
 usa as imagens `hashicorp/terraform` e `redocly/cli`. Essa alternativa **não** serve para aplicar
