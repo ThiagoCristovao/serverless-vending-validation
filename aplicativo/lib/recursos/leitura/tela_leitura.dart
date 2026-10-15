@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+import '../../app/roteador.dart';
+import '../validacao/validacao_controlador.dart';
 
 import '../../compartilhado/erros.dart';
 import '../autenticacao/sessao.dart';
@@ -166,7 +170,7 @@ class _PainelDeEstado extends StatelessWidget {
   }
 }
 
-class _CartaoDecodificado extends StatelessWidget {
+class _CartaoDecodificado extends ConsumerWidget {
   const _CartaoDecodificado({
     required this.payload,
     required this.aoLerNovamente,
@@ -176,7 +180,7 @@ class _CartaoDecodificado extends StatelessWidget {
   final Future<void> Function() aoLerNovamente;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final esquema = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
@@ -201,10 +205,14 @@ class _CartaoDecodificado extends StatelessWidget {
             _Linha('Adesivo válido até', payload.exp),
             _Linha('Chave', payload.kid),
             const SizedBox(height: 16),
-            // Sprint 7: aqui a requisição ao serviço de validação é disparada.
-            FilledButton(
-              onPressed: null,
-              child: const Text('Validar na nuvem (Sprint 7)'),
+            FilledButton.icon(
+              onPressed: () {
+                // Abre a validação no serviço e segue para o resultado (fluxos 4–6).
+                ref.read(validacaoProvider.notifier).iniciar(payload);
+                context.go(Rotas.resultado);
+              },
+              icon: const Icon(Icons.cloud_upload_outlined),
+              label: const Text('Validar máquina'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
