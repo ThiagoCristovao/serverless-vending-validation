@@ -1,55 +1,56 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../recursos/autenticacao/sessao.dart';
 import '../recursos/autenticacao/tela_entrar.dart';
 import '../recursos/leitura/tela_leitura.dart';
+import 'tela_inicial.dart';
 
 /// Caminhos das telas.
 abstract final class Rotas {
+  static const inicial = '/';
   static const entrar = '/entrar';
   static const leitura = '/leitura';
 }
 
-/// Converte um Stream em Listenable para o GoRouter reavaliar os redirects
-/// sempre que a sessão mudar.
-class _NotificadorDeStream extends ChangeNotifier {
-  _NotificadorDeStream(Stream<Object?> stream) {
-    _assinatura = stream.asBroadcastStream().listen((_) => notifyListeners());
-  }
-
-  late final StreamSubscription<Object?> _assinatura;
-
-  @override
-  void dispose() {
-    _assinatura.cancel();
-    super.dispose();
-  }
+/// Avisa o GoRouter para reavaliar os redirecionamentos.
+class _Notificador extends ChangeNotifier {
+  void notificar() => notifyListeners();
 }
 
 final roteadorProvider = Provider<GoRouter>((ref) {
-  final notificador = _NotificadorDeStream(
-    ref.watch(firebaseAuthProvider).authStateChanges(),
-  );
+  final notificador = _Notificador();
   ref.onDispose(notificador.dispose);
 
+  // Reage ao provedor de sessão, e não ao Firebase diretamente: assim o
+  // redirect só roda depois que o estado da sessão já foi atualizado, e o
+  // provedor fica vivo enquanto o roteador existir.
+  ref.listen(sessaoProvider, (_, _) => notificador.notificar());
+
   return GoRouter(
-    initialLocation: Rotas.leitura,
+    initialLocation: Rotas.inicial,
     refreshListenable: notificador,
     redirect: (context, estado) {
       final sessao = ref.read(sessaoProvider);
-      if (sessao.isLoading) return null;
+      final local = estado.matchedLocation;
+      if (sessao.isLoading) {
+        return local == Rotas.inicial ? null : Rotas.inicial;
+      }
       final autenticado = sessao.value != null;
-      final indoParaEntrar = estado.matchedLocation == Rotas.entrar;
-      if (!autenticado && !indoParaEntrar) return Rotas.entrar;
-      if (autenticado && indoParaEntrar) return Rotas.leitura;
+      if (!autenticado) {
+        return local == Rotas.entrar ? null : Rotas.entrar;
+      }
+      if (local == Rotas.entrar || local == Rotas.inicial) {
+        return Rotas.leitura;
+      }
       return null;
     },
     routes: [
+      GoRoute(
+        path: Rotas.inicial,
+        builder: (context, estado) => const TelaInicial(),
+      ),
       GoRoute(
         path: Rotas.entrar,
         builder: (context, estado) => const TelaEntrar(),

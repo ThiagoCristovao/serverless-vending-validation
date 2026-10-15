@@ -5,7 +5,7 @@ gerenciado pelo FVM; use `fvm flutter ...` neste diretório (ou os alvos `make a
 
 | Sprint | Estado | Conteúdo |
 |---|---|---|
-| 6 | **implementada** (verificação em dispositivo físico pendente) | estrutura em camadas com Riverpod, login com Firebase Authentication, leitura do QR com `mobile_scanner`, validação local do adesivo (estrutura, chave, assinatura Ed25519, validade), estados de câmera e de erro |
+| 6 | **concluída** (verificada em Motorola Edge 50 Pro, Android 15, em 15/10/2026) | estrutura em camadas com Riverpod, login com Firebase Authentication, leitura do QR com `mobile_scanner`, validação local do adesivo (estrutura, chave, assinatura Ed25519, validade), estados de câmera e de erro |
 | 7 | pendente | cliente HTTP com JWT e `Idempotency-Key`, tela de resultado (contrassenha, dados, leituras, conclusão), tratamento dos erros do serviço, testes dos fluxos |
 
 ## Estrutura
@@ -15,7 +15,8 @@ lib/
 ├── main.dart                        inicializa o Firebase (google-services.json) e o ProviderScope
 ├── app/
 │   ├── app.dart                     MaterialApp.router, tema, pt-BR
-│   ├── roteador.dart                GoRouter: /entrar e /leitura, redirect pela sessão
+│   ├── roteador.dart                GoRouter: /, /entrar e /leitura; redirect reage ao provedor de sessão
+│   ├── tela_inicial.dart            espera enquanto a sessão do Firebase é resolvida
 │   └── tema.dart                    tema escuro com destaque verde (Figura 2); estilo da contrassenha
 ├── compartilhado/
 │   └── erros.dart                   CodigoErro (espelha o contrato), ErroDominio, mensagens ao operador
@@ -66,3 +67,11 @@ Para testar a leitura sem máquina: gere um adesivo com `servico/cmd/gerar-qr` (
 Em dispositivo físico: entrar com a conta de operador, apontar para um QR válido e ver os dados
 decodificados, sem comunicação com o serviço de validação. Casos negativos: QR de outro conteúdo,
 adesivo vencido e adesivo adulterado devem ser recusados com mensagem.
+
+**Verificado em 15/10/2026** em um Motorola Edge 50 Pro conectado por depuração Wi-Fi: login com o
+operador de testes, leitura do adesivo `VM-2047` com o cartão de dados decodificados, recusa de um QR
+qualquer com "Código não reconhecido" e saída/retorno ao login. Logcat sem erros de Flutter ou do
+Android; eventos de câmera e de sessão do Firebase registrados.
+
+Lição de conexão: o aparelho não enumerou na USB com o cabo disponível (cabo só de carga); a
+depuração por Wi-Fi (`adb pair` + `adb connect`) resolveu sem cabo.
