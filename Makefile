@@ -33,6 +33,7 @@ endif
 .PHONY: ajuda configurar verificar infra-formatar infra-formatar-verificar infra-validar api-lint \
         servico-formatar servico-formatar-verificar servico-verificar servico-cobertura \
         servico-integracao servico-local emuladores-subir emuladores-parar \
+        app-analisar app-testar app-verificar app-apk app-executar \
         infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
         infra-dev-init infra-dev-plan infra-dev-apply segredo-hmac-gerar app-google-services
 
@@ -43,7 +44,7 @@ configurar: ## Instala o toolchain fixado (mise) e o Flutter (FVM)
 	mise install
 	cd aplicativo && fvm install
 
-verificar: infra-formatar-verificar infra-validar api-lint servico-formatar-verificar servico-verificar ## Executa todas as verificações locais (o mesmo que a CI)
+verificar: infra-formatar-verificar infra-validar api-lint servico-formatar-verificar servico-verificar app-verificar ## Executa todas as verificações locais (o mesmo que a CI)
 
 infra-formatar: ## Formata os arquivos Terraform
 	$(TERRAFORM) fmt -recursive infra
@@ -113,3 +114,18 @@ app-google-services: ## Grava aplicativo/android/app/google-services.json a part
 	mkdir -p aplicativo/android/app
 	$(TERRAFORM) -chdir=infra/ambientes/dev output -raw google_services_json > aplicativo/android/app/google-services.json
 	@echo "google-services.json gravado"
+
+app-analisar: ## Análise estática do aplicativo Flutter (via FVM)
+	cd aplicativo && fvm flutter analyze
+
+app-testar: ## Testes de unidade e de widget do aplicativo
+	cd aplicativo && fvm flutter test
+
+app-verificar: ## Formatação, análise e testes do aplicativo (o mesmo que a CI)
+	cd aplicativo && fvm dart format --output=none --set-exit-if-changed lib test && fvm flutter analyze && fvm flutter test
+
+app-apk: ## Compila o APK de depuração (build/app/outputs/flutter-apk/app-debug.apk)
+	cd aplicativo && fvm flutter build apk --debug
+
+app-executar: ## Instala e executa no dispositivo Android conectado (adb devices)
+	cd aplicativo && fvm flutter run

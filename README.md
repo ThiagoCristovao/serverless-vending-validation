@@ -38,7 +38,8 @@ com fluxos de exceção, está em [docs/arquitetura.md](docs/arquitetura.md).
 Sprints concluídas: **0** (fundação), **1** e **2** (requisitos, contrato e arquitetura),
 **3** (infraestrutura base em Terraform), **4** (domínio do serviço em Go) e **5** (serviço
 implantado atrás do API Gateway, com Firestore, Pub/Sub e reconciliação, verificado de ponta a
-ponta em `svv-dev`). Próxima: **6** (aplicativo: autenticação e leitura do QR). O planejamento completo está em
+ponta em `svv-dev`). **6** (aplicativo: autenticação e leitura do QR com validação local, verificado em dispositivo
+físico). Próxima: **7** (aplicativo integrado ao serviço). O planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 
