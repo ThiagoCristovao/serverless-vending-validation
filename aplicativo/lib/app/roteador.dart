@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../recursos/autenticacao/sessao.dart';
 import '../recursos/autenticacao/tela_entrar.dart';
 import '../recursos/leitura/tela_leitura.dart';
+import '../recursos/validacao/tela_resultado.dart';
 import 'tela_inicial.dart';
 
 /// Caminhos das telas.
@@ -12,6 +13,7 @@ abstract final class Rotas {
   static const inicial = '/';
   static const entrar = '/entrar';
   static const leitura = '/leitura';
+  static const resultado = '/resultado';
 }
 
 /// Avisa o GoRouter para reavaliar os redirecionamentos.
@@ -58,6 +60,10 @@ final roteadorProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Rotas.leitura,
         builder: (context, estado) => const TelaLeitura(),
+      ),
+      GoRoute(
+        path: Rotas.resultado,
+        builder: (context, estado) => const TelaResultado(),
       ),
     ],
   );

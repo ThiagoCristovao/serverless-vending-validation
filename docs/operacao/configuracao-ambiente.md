@@ -148,7 +148,9 @@ curl -s -X POST "https://$HOST/v1/validacoes" -H "Authorization: Bearer $TOKEN" 
 
 A resposta `201` traz a contrassenha corrente e a próxima. O ID token vale uma hora; repita o
 `token-operador` (sem `-criar`) para renovar. Para ver as mensagens publicadas:
-`gcloud pubsub subscriptions pull svv-dev-sistema-central --auto-ack --limit=10`.
+`gcloud pubsub subscriptions pull svv-dev-sistema-central --auto-ack --limit=10`. Como a assinatura
+tem ordenação por `idMaquina`, uma mensagem não confirmada segura as seguintes da mesma máquina:
+sem `--auto-ack`, cada `pull` devolve só a próxima da fila; repita o comando até esvaziar.
 
 ## 7. Custos
 
@@ -176,4 +178,5 @@ Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais
 | `Error 403: ... requires a quota project` ao criar o orçamento | Provider sem `user_project_override` e `billing_project` com credenciais de usuário | Já corrigido em `infra/bootstrap/main.tf`; se aparecer em outra API, adicionar as mesmas duas linhas ao provider |
 | Projeto criado via `gcloud` não aparece em "Adicionar projeto" do Firebase; `google_firebase_project` falha com `403 The caller does not have permission` | Elegibilidade do projeto no Firebase (causa não documentada pelo Google; permissões e políticas estavam corretas) | Criar o projeto pelo console do Firebase e vincular o faturamento depois (ADR-0010) |
 | `Database ID '(default)' is not available ... retry in N seconds` logo após um `destroy` | O Firestore reserva o ID do banco excluído por ~5 minutos | Aguardar e repetir `make infra-dev-apply` |
+| `pull` da assinatura devolve uma mensagem só (ou nenhuma) embora o serviço tenha publicado várias | Ordenação por chave: a mensagem anterior da mesma máquina ainda não foi confirmada, ou o `pull` voltou vazio antes de o servidor liberar a próxima | Confirmar (`ack`) e repetir o `pull` algumas vezes; `--auto-ack` faz isso de uma vez |
 | `Reauthentication failed. cannot prompt during non-interactive execution` em qualquer `gcloud` | A conta do Workspace (`alunos.utfpr.edu.br`) tem política de sessão; a credencial de usuário expira periodicamente. As credenciais do Terraform (ADC) expiram separadamente | Repetir `gcloud auth login` (e, se o Terraform também falhar, `gcloud auth application-default login`) |

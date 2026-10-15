@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../compartilhado/conectividade.dart';
 import 'roteador.dart';
 import 'tema.dart';
 
@@ -19,6 +20,12 @@ class Aplicativo extends ConsumerWidget {
       supportedLocales: const [Locale('pt', 'BR')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       debugShowCheckedModeBanner: false,
+      builder: (context, filho) => Column(
+        children: [
+          const FaixaSemConexao(),
+          Expanded(child: filho ?? const SizedBox.shrink()),
+        ],
+      ),
     );
   }
 }
