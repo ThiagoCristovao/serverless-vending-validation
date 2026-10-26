@@ -152,13 +152,48 @@ A resposta `201` traz a contrassenha corrente e a próxima. O ID token vale uma 
 tem ordenação por `idMaquina`, uma mensagem não confirmada segura as seguintes da mesma máquina:
 sem `--auto-ack`, cada `pull` devolve só a próxima da fila; repita o comando até esvaziar.
 
-## 7. Custos
+## 7. Ecossistema completo e suíte de ponta a ponta (Sprint 8)
+
+O sistema central simulado consome a assinatura `svv-dev-sistema-central` e expõe uma API
+administrativa local (porta 8090). A suíte e2e sobe o consumidor dentro do próprio processo de
+teste, por isso **não** execute `make central-executar` ao mesmo tempo que `make e2e`: os dois
+disputariam as mesmas mensagens.
+
+```bash
+make e2e-preparar          # uma vez: semeia VM-E2E1 e VM-E2E2 (localização E2E-L) no Firestore
+printf '%s' '<senha do operador de testes>' > chaves/operador1.senha && chmod 600 chaves/operador1.senha
+make e2e                   # ~5 min; o cenário de DLQ espera as reentregas (10 s → 600 s)
+make e2e E2E_ARGS=-short   # pula o cenário de DLQ
+```
+
+A suíte usa o gateway (saída `gateway_hostname` do Terraform), a chave de API web do
+`google-services.json`, o operador de testes e a chave privada dos adesivos em `chaves/`. Ao
+final imprime o resumo dos contadores do consumidor e o caminho do arquivo JSON Lines com os
+eventos recebidos.
+
+Para operar o consumidor manualmente (demonstrações e Sprint 9):
+
+```bash
+make central-executar                                   # consome svv-dev-sistema-central
+curl -s localhost:8090/saude
+curl -s 'localhost:8090/eventos?idMaquina=VM-2047'
+curl -s -X PUT localhost:8090/admin/falhas -d '{"modo":"rejeitar","idMaquina":"VM-2047"}'
+curl -s -X POST localhost:8090/admin/pausar             # indisponibilidade do sistema central
+curl -s -X POST localhost:8090/admin/retomar
+```
+
+Os eventos ficam em `sistema-central-simulado/dados/eventos.jsonl` (ignorado pelo git); apague o
+arquivo para recomeçar do zero. Para rodar com a identidade da conta de serviço do consumidor,
+use `go run ./cmd/central -impersonar svv-dev-central-simulado@svv-dev.iam.gserviceaccount.com`
+(exige `roles/iam.serviceAccountTokenCreator` na conta).
+
+## 8. Custos
 
 Os serviços usados têm camada gratuita generosa para o volume deste trabalho. Os pontos de
 atenção são os testes de carga (Sprint 10) e instâncias mínimas da função, se habilitadas. O
 orçamento do bootstrap avisa por e-mail; ele **não** bloqueia gastos.
 
-## 8. Verificação
+## 9. Verificação
 
 ```bash
 make verificar
@@ -166,7 +201,7 @@ make verificar
 
 Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais GCP.
 
-## 9. Problemas comuns
+## 10. Problemas comuns
 
 | Sintoma | Causa provável | Ação |
 |---|---|---|
@@ -178,5 +213,8 @@ Deve terminar sem erros. Na CI o mesmo conjunto roda em cada PR, sem credenciais
 | `Error 403: ... requires a quota project` ao criar o orçamento | Provider sem `user_project_override` e `billing_project` com credenciais de usuário | Já corrigido em `infra/bootstrap/main.tf`; se aparecer em outra API, adicionar as mesmas duas linhas ao provider |
 | Projeto criado via `gcloud` não aparece em "Adicionar projeto" do Firebase; `google_firebase_project` falha com `403 The caller does not have permission` | Elegibilidade do projeto no Firebase (causa não documentada pelo Google; permissões e políticas estavam corretas) | Criar o projeto pelo console do Firebase e vincular o faturamento depois (ADR-0010) |
 | `Database ID '(default)' is not available ... retry in N seconds` logo após um `destroy` | O Firestore reserva o ID do banco excluído por ~5 minutos | Aguardar e repetir `make infra-dev-apply` |
+| `make e2e` falha em `abrir validação` com `409` repetido | Validação aberta na máquina e2e por outro operador | Esperar 15 min (RN-04) ou concluir pelo operador que a abriu |
+| `make e2e` falha em `token do operador` com `INVALID_LOGIN_CREDENTIALS` | `chaves/operador1.senha` ausente ou errada | Regravar o arquivo com a senha do operador de testes |
+| Cenário de DLQ da e2e estoura o prazo | As reentregas respeitam a espera exponencial da assinatura; raramente passam de 5 min | Aumentar `SVV_E2E_PRAZO_DLQ` (ex.: `15m`) ou rodar com `E2E_ARGS=-short` |
 | `pull` da assinatura devolve uma mensagem só (ou nenhuma) embora o serviço tenha publicado várias | Ordenação por chave: a mensagem anterior da mesma máquina ainda não foi confirmada, ou o `pull` voltou vazio antes de o servidor liberar a próxima | Confirmar (`ack`) e repetir o `pull` algumas vezes; `--auto-ack` faz isso de uma vez |
 | `Reauthentication failed. cannot prompt during non-interactive execution` em qualquer `gcloud` | A conta do Workspace (`alunos.utfpr.edu.br`) tem política de sessão; a credencial de usuário expira periodicamente. As credenciais do Terraform (ADC) expiram separadamente | Repetir `gcloud auth login` (e, se o Terraform também falhar, `gcloud auth application-default login`) |

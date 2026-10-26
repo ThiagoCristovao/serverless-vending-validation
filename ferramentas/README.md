@@ -8,6 +8,8 @@ Utilitários que não fazem parte do produto, mas sustentam o desenvolvimento e 
 | `semear-firestore` | `servico/cmd/semear-firestore` | 5 | Cadastra máquina, operador e chave pública no Firestore do projeto ou no emulador |
 | `token-operador` | `servico/cmd/token-operador` | 5 | Cria (opcionalmente) um operador no Firebase Auth e devolve um ID token para chamar o gateway |
 | `emuladores/` | aqui | 5 | `docker-compose.yml` com os emuladores do Firestore e do Pub/Sub para os testes de integração |
+| `central` | `sistema-central-simulado/cmd/central` | 8 | Sistema central simulado: consome a assinatura, registra eventos de forma idempotente e expõe a API administrativa (falhas, pausa) |
+| suíte e2e | `sistema-central-simulado/e2e` | 8 | Testes de ponta a ponta contra o ambiente dev (`make e2e`): fluxo principal, duplicatas e DLQ |
 | `injecao-falhas/` | aqui | 9 | Scripts que desligam o consumidor, simulam rede intermitente e indisponibilidade da autenticação |
 | `carga/` | aqui | 10 | Scripts k6 para os testes de carga e coleta de p50/p95/p99, cold start e regime contínuo |
 
