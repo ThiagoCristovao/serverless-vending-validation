@@ -1,5 +1,6 @@
-# Verificações mínimas da Sprint 0. Roda sem credenciais GCP.
-# Jobs: Terraform (fmt/validate), OpenAPI (lint), Go (servico) e Flutter (aplicativo).
+# Verificações do repositório. Roda sem credenciais GCP.
+# Jobs: Terraform (fmt/validate), OpenAPI (lint), Go (servico e sistema-central-simulado)
+# e Flutter (aplicativo). A suíte e2e (Sprint 8) só é compilada aqui; executa com `make e2e`.
 name: CI
 
 on:
@@ -46,16 +47,20 @@ jobs:
         run: npx --yes @redocly/cli@latest lint api/openapi.yaml
 
   go:
-    name: Go (servico)
+    name: Go (${{ matrix.modulo }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        modulo: [servico, sistema-central-simulado]
     defaults:
       run:
-        working-directory: servico
+        working-directory: ${{ matrix.modulo }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
-          go-version-file: servico/go.mod
+          go-version-file: ${{ matrix.modulo }}/go.mod
           cache: false
       - name: gofmt
         run: |
@@ -63,6 +68,9 @@ jobs:
           if [ -n "$fora" ]; then echo "fora do gofmt:"; echo "$fora"; exit 1; fi
       - name: go vet
         run: go vet ./...
+      - name: go vet da suíte e2e (só compila; executa com make e2e)
+        if: matrix.modulo == 'sistema-central-simulado'
+        run: go vet -tags e2e ./e2e/
       - name: go test
         run: go test ./... -count=1
 

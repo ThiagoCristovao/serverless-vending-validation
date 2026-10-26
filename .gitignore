@@ -98,3 +98,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .claude/settings.local.json
+
+# Sistema central simulado: eventos consumidos localmente (Sprint 8)
+sistema-central-simulado/dados/

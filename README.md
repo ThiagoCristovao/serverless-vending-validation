@@ -39,19 +39,20 @@ Sprints concluídas: **0** (fundação), **1** e **2** (requisitos, contrato e a
 **3** (infraestrutura base em Terraform), **4** (domínio do serviço em Go) e **5** (serviço
 implantado atrás do API Gateway, com Firestore, Pub/Sub e reconciliação, verificado de ponta a
 ponta em `svv-dev`). **6** (aplicativo: autenticação e leitura do QR com validação local, verificado em dispositivo
-físico) e **7** (aplicativo integrado ao serviço: contrassenha, leituras, conclusão e cenários de
-erro, verificado em dispositivo físico contra `svv-dev`). Próxima: **8** (testes de ponta a ponta
-com o consumidor simulado). O planejamento completo está em
+físico), **7** (aplicativo integrado ao serviço: contrassenha, leituras, conclusão e cenários de
+erro, verificado em dispositivo físico contra `svv-dev`) e **8** (sistema central simulado e suíte
+de ponta a ponta executada contra `svv-dev`: fluxo principal, duplicatas e DLQ). Próxima: **9**
+(avaliação de resiliência e independência). O planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 
 ## Estrutura do repositório
 
 ```
-api/                       contrato OpenAPI 3.1 (canônico) e exemplos de payload
+api/                       contrato OpenAPI 3.0 (canônico) e exemplos de payload
 servico/                   serviço de validação em Go (Cloud Run function) — Sprint 4
 aplicativo/                aplicativo Flutter do operador — Sprint 6
-sistema-central-simulado/  consumidor Pub/Sub que simula o sistema central — Sprint 8
+sistema-central-simulado/  consumidor Pub/Sub que simula o sistema central e suíte e2e — Sprint 8
 ferramentas/               scripts de apoio (gerador de QR, carga, injeção de falhas)
 infra/
   bootstrap/               APIs, bucket de estado e orçamento (roda uma vez)
@@ -99,10 +100,12 @@ remoto.
 |---|---|
 | `make ajuda` | Lista todos os alvos |
 | `make configurar` | Instala o toolchain fixado |
-| `make verificar` | Formatação e validação do Terraform e lint do OpenAPI (o mesmo que a CI) |
+| `make verificar` | Terraform, OpenAPI, Go (serviço e sistema central) e Flutter (o mesmo que a CI) |
 | `make infra-bootstrap-apply` | Aplica o bootstrap (APIs, bucket de estado, orçamento) |
 | `make infra-dev-init` / `plan` / `apply` | Opera o ambiente de desenvolvimento |
 | `make api-lint` | Valida `api/openapi.yaml` |
+| `make central-executar` | Roda o sistema central simulado contra o ambiente dev (API em `:8090`) |
+| `make e2e` | Suíte de ponta a ponta contra o ambiente dev (Sprint 8) |
 
 ## Convenções
 

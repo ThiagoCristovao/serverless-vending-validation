@@ -9,7 +9,7 @@
 | [arquitetura.md](arquitetura.md) | Componentes, fluxos, mensageria, segurança, cenários de exceção, telas | 2 |
 | [diagramas/](diagramas/) | Fontes Mermaid dos diagramas usados na arquitetura e na monografia | 2 |
 | [adr/](adr/) | Registros de decisão de arquitetura (ADR) | todas |
-| [operacao/configuracao-ambiente.md](operacao/configuracao-ambiente.md) | Toolchain, projeto GCP, bootstrap, ambiente dev | 0 |
+| [operacao/configuracao-ambiente.md](operacao/configuracao-ambiente.md) | Toolchain, projeto GCP, bootstrap, ambiente dev, teste do serviço, ecossistema completo e suíte e2e | 0, 5, 8 |
 | [operacao/convencoes.md](operacao/convencoes.md) | Idioma, branches, commits, ADRs, nomes de recursos | 0 |
 | [referencias/TCC1-proposta.pdf](referencias/TCC1-proposta.pdf) | Proposta aprovada no TCC 1 | — |
 

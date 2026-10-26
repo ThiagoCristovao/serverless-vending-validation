@@ -141,6 +141,14 @@ função (`POST /interno/reconciliar-publicacoes`, fora do gateway, autenticado 
 conta de serviço do Scheduler). A função republica as validações cujo marcador de publicação está
 nulo há mais de 2 minutos e grava o marcador ao conseguir. Implementado na Sprint 5.
 
+**Consumidor (sistema central simulado, ADR-0013).** Módulo Go independente que conhece apenas o
+contrato dos eventos. Persiste cada evento novo em um arquivo JSON Lines e só então confirma
+(`ack`); duplicatas por `(idValidacao, tipo)` são reconhecidas mesmo após reinício e confirmadas
+sem novo registro (CE-17). Corpo fora do contrato é rejeitado (`nack`) e, após 5 tentativas,
+vai à DLQ (CE-16). Um interruptor de falhas (`rejeitar`, `confirmacao-perdida`), com pausa e
+retomada do consumo, é controlado por uma API administrativa local e alimenta os cenários das
+Sprints 8 e 9. Implementado na Sprint 8, com suíte de ponta a ponta contra o ambiente dev.
+
 ## 7. Persistência
 
 Firestore em modo nativo com transações para as duas operações de escrita (abertura e conclusão),
@@ -221,7 +229,7 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0012](adr/0012-reconciliacao-de-publicacoes-via-cloud-scheduler.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0013](adr/0013-consumidor-simulado-independente-e-suite-e2e.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:
