@@ -41,10 +41,10 @@ implantado atrás do API Gateway, com Firestore, Pub/Sub e reconciliação, veri
 ponta em `svv-dev`). **6** (aplicativo: autenticação e leitura do QR com validação local, verificado em dispositivo
 físico), **7** (aplicativo integrado ao serviço: contrassenha, leituras, conclusão e cenários de
 erro, verificado em dispositivo físico contra `svv-dev`) e **8** (sistema central simulado e suíte
-de ponta a ponta executada contra `svv-dev`: fluxo principal, duplicatas e DLQ). **9** (avaliação
-de resiliência e independência) em andamento: os cenários do lado do serviço foram executados com
-evidências em [docs/avaliacao/resiliencia.md](docs/avaliacao/resiliencia.md); faltam os cenários
-no dispositivo. O planejamento completo está em
+de ponta a ponta executada contra `svv-dev`: fluxo principal, duplicatas e DLQ) e **9** (avaliação
+de resiliência e independência: cenários de falha do lado do serviço e do dispositivo executados,
+com evidências em [docs/avaliacao/resiliencia.md](docs/avaliacao/resiliencia.md)). A **10**
+(escalabilidade e consolidação) é a próxima. O planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 
