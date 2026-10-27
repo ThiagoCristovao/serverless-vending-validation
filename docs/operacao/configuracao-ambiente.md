@@ -183,7 +183,24 @@ curl -s -X POST localhost:8090/admin/retomar
 ```
 
 Os eventos ficam em `sistema-central-simulado/dados/eventos.jsonl` (ignorado pelo git); apague o
-arquivo para recomeçar do zero. Para rodar com a identidade da conta de serviço do consumidor,
+arquivo para recomeçar do zero.
+
+### 7.1 Injeção de falhas (Sprint 9)
+
+Os cenários do lado do serviço rodam sem o celular e gravam o relatório em
+`docs/avaliacao/evidencias/<cenario>.md`; os dois últimos removem e restauram um vínculo IAM da
+conta da função (ADR-0014). Se um deles for interrompido, `CENARIO=restaurar` repara.
+
+```bash
+make experimento CENARIO=central-indisponivel      # pausa o consumidor por 3 min (EXPERIMENTO_ARGS="-indisponibilidade 5m")
+make experimento CENARIO=publicacao-indisponivel   # remove pubsub.publisher da função; espera a reconciliação
+make experimento CENARIO=firestore-indisponivel    # remove datastore.user da função; 503 e recuperação
+make experimento CENARIO=restaurar
+```
+
+Os cenários do dispositivo (rede intermitente e autenticação indisponível) usam o proxy e o
+bloqueio DNS de `ferramentas/injecao-falhas/` (`make injecao-proxy`, `make injecao-dns`,
+`make app-apk-injecao`); o roteiro está no README daquele diretório. Para rodar com a identidade da conta de serviço do consumidor,
 use `go run ./cmd/central -impersonar svv-dev-central-simulado@svv-dev.iam.gserviceaccount.com`
 (exige `roles/iam.serviceAccountTokenCreator` na conta).
 

@@ -41,8 +41,10 @@ implantado atrás do API Gateway, com Firestore, Pub/Sub e reconciliação, veri
 ponta em `svv-dev`). **6** (aplicativo: autenticação e leitura do QR com validação local, verificado em dispositivo
 físico), **7** (aplicativo integrado ao serviço: contrassenha, leituras, conclusão e cenários de
 erro, verificado em dispositivo físico contra `svv-dev`) e **8** (sistema central simulado e suíte
-de ponta a ponta executada contra `svv-dev`: fluxo principal, duplicatas e DLQ). Próxima: **9**
-(avaliação de resiliência e independência). O planejamento completo está em
+de ponta a ponta executada contra `svv-dev`: fluxo principal, duplicatas e DLQ). **9** (avaliação
+de resiliência e independência) em andamento: os cenários do lado do serviço foram executados com
+evidências em [docs/avaliacao/resiliencia.md](docs/avaliacao/resiliencia.md); faltam os cenários
+no dispositivo. O planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 
@@ -53,7 +55,7 @@ api/                       contrato OpenAPI 3.0 (canônico) e exemplos de payloa
 servico/                   serviço de validação em Go (Cloud Run function) — Sprint 4
 aplicativo/                aplicativo Flutter do operador — Sprint 6
 sistema-central-simulado/  consumidor Pub/Sub que simula o sistema central e suíte e2e — Sprint 8
-ferramentas/               scripts de apoio (gerador de QR, carga, injeção de falhas)
+ferramentas/               scripts de apoio (emuladores, injeção de falhas — Sprint 9, carga — Sprint 10)
 infra/
   bootstrap/               APIs, bucket de estado e orçamento (roda uma vez)
   modulos/                 módulos Terraform por serviço gerenciado
@@ -64,6 +66,7 @@ docs/
   modelo-dados.md          coleções do Firestore e esquema dos eventos — Sprint 1
   arquitetura.md           componentes, fluxos, exceções, segurança — Sprint 2
   diagramas/               fontes Mermaid dos diagramas
+  avaliacao/               relatório de resiliência e independência com evidências — Sprint 9
   adr/                     registros de decisão de arquitetura
   operacao/                configuração do ambiente e convenções
   referencias/             proposta do TCC 1 (PDF)
@@ -106,6 +109,7 @@ remoto.
 | `make api-lint` | Valida `api/openapi.yaml` |
 | `make central-executar` | Roda o sistema central simulado contra o ambiente dev (API em `:8090`) |
 | `make e2e` | Suíte de ponta a ponta contra o ambiente dev (Sprint 8) |
+| `make experimento CENARIO=…` | Cenário de injeção de falhas com relatório de evidências (Sprint 9) |
 
 ## Convenções
 

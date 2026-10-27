@@ -81,6 +81,8 @@ Para testar a leitura sem máquina: gere um adesivo com `servico/cmd/gerar-qr` (
 |---|---|
 | Sem rede ou 503 ao abrir | até 3 reenvios automáticos (1 s, 2 s, 4 s) com a mesma `Idempotency-Key`; depois, mensagem e "Tentar novamente" |
 | Resposta da conclusão perdida | o app consulta `GET /validacoes/{id}` antes de reenviar; se já concluiu, mostra a conclusão (CE-03) |
+| Conclusão cortada antes de chegar ao serviço | a consulta confirma a validação aberta e o app reenvia a conclusão (1 s, 2 s, 4 s); se esgotar, mensagem e o formulário continua (Sprint 9) |
+| `validacao_ja_concluida` na conclusão | consulta e mostra a conclusão registrada pelo serviço |
 | 401 do gateway | renova o ID token uma vez e repete; se persistir, encerra a sessão e volta ao login (CE-04) |
 | 409 validação em andamento | mensagem e "Retomar validação em andamento" (consulta); se for de outro operador, 403 explica |
 | Prazo de 15 min vencido na tela | contagem regressiva chega a zero, estado passa a expirado, "Ler outro código" |

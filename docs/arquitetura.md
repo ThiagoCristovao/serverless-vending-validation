@@ -162,7 +162,8 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
   por estado; erros em Problem Details com `codigo` estável (ADR-0009).
 - **Aplicativo:** até 3 reenvios com espera 1 s, 2 s, 4 s para erro de rede, tempo esgotado e
   `503`; um reenvio após renovar o token em `401`; nunca para outros `4xx`. Antes de reenviar uma
-  conclusão, consulta `GET /validacoes/{id}`. Diagrama:
+  conclusão, consulta `GET /validacoes/{id}`: se já concluída, exibe a conclusão; se ainda aberta,
+  reenvia com as mesmas esperas (Sprint 9, ADR-0009). Diagrama:
   [diagramas/sequencia-falha-rede.mmd](diagramas/sequencia-falha-rede.mmd).
 - **Consumidor:** `ack` só após persistir; `nack` em falha; duplicatas ignoradas.
 
@@ -194,6 +195,8 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
 
 Diagrama dos cenários CE-15 e CE-16:
 [diagramas/sequencia-central-indisponivel.mmd](diagramas/sequencia-central-indisponivel.mmd).
+A execução dos cenários de falha com as evidências coletadas está em
+[avaliacao/resiliencia.md](avaliacao/resiliencia.md) (Sprint 9; mecanismos de injeção no ADR-0014).
 
 ## 10. Observabilidade
 
@@ -229,7 +232,7 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0013](adr/0013-consumidor-simulado-independente-e-suite-e2e.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0014](adr/0014-injecao-de-falhas-por-iam-proxy-e-dns.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:

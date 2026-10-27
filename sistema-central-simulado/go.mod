@@ -3,6 +3,8 @@ module github.com/ThiagoCristovao/serverless-vending-validation/sistema-central-
 go 1.27
 
 require (
+	cloud.google.com/go/firestore v1.24.0
+	cloud.google.com/go/iam v1.12.0
 	cloud.google.com/go/pubsub/v2 v2.7.0
 	google.golang.org/api v0.299.0
 	google.golang.org/grpc v1.84.0
@@ -13,7 +15,7 @@ require (
 	cloud.google.com/go/auth v0.23.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.1 // indirect
-	cloud.google.com/go/iam v1.12.0 // indirect
+	cloud.google.com/go/longrunning v1.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

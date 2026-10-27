@@ -115,6 +115,14 @@ class ValidacaoControlador extends Notifier<EstadoValidacao> {
     }
   }
 
+  /// Esperas entre reenvios da conclusão, depois que a consulta confirma que
+  /// ela não foi aplicada (mesma política do cliente HTTP, ADR-0009).
+  static const esperasDeReenvio = [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+  ];
+
   Future<void> concluir({
     required Leituras leituras,
     required bool codigoRotacionado,
@@ -124,36 +132,60 @@ class ValidacaoControlador extends Notifier<EstadoValidacao> {
     if (atual is! ValidacaoAberta || atual.concluindo) return;
     final v = atual.validacao;
     state = atual.copiar(concluindo: true, limparErro: true);
-    try {
-      final conclusao = await _servico.concluir(
-        v.idValidacao,
-        leituras: leituras,
-        codigoRotacionado: codigoRotacionado,
-        observacoes: observacoes,
-      );
-      state = ValidacaoConcluida(v, conclusao);
-    } on ErroDominio catch (e) {
-      await _tratarSessao(e);
-      if (e.codigo == CodigoErro.semConexao) {
-        // A resposta pode ter se perdido depois de o serviço concluir: consulta antes de reenviar.
-        try {
-          final consulta = await _servico.consultar(v.idValidacao);
-          if (consulta.status == StatusValidacao.concluida) {
-            state = ValidacaoConcluida(
-              consulta,
-              Conclusao.deValidacao(consulta),
-            );
+    var reenvios = 0;
+    while (true) {
+      try {
+        final conclusao = await _servico.concluir(
+          v.idValidacao,
+          leituras: leituras,
+          codigoRotacionado: codigoRotacionado,
+          observacoes: observacoes,
+        );
+        state = ValidacaoConcluida(v, conclusao);
+        return;
+      } on ErroDominio catch (e) {
+        await _tratarSessao(e);
+        if (_podeTerConcluido(e)) {
+          // A resposta pode ter se perdido depois de o serviço concluir (CE-03),
+          // ou um envio anterior já concluiu: consulta antes de reenviar.
+          final consulta = await _consultarSemFalhar(v.idValidacao);
+          if (consulta != null && consulta.status != StatusValidacao.aberta) {
+            state = _estadoDeConsulta(consulta);
             return;
           }
-        } on ErroDominio {
-          // mantém o erro original de rede
+          // A consulta confirmou a validação ainda aberta: a conclusão não foi
+          // aplicada e reenviá-la é seguro (RF-23, cenário D4 da Sprint 9).
+          if (consulta != null &&
+              _repetivel(e) &&
+              reenvios < esperasDeReenvio.length) {
+            await ref.read(esperaDeReenvioProvider)(esperasDeReenvio[reenvios]);
+            reenvios++;
+            continue;
+          }
         }
-      }
-      if (e.codigo == CodigoErro.validacaoExpirada) {
-        state = FalhaValidacao(e, payload: _payload);
+        if (e.codigo == CodigoErro.validacaoExpirada) {
+          state = FalhaValidacao(e, payload: _payload);
+          return;
+        }
+        state = ValidacaoAberta(v, erroConclusao: e);
         return;
       }
-      state = ValidacaoAberta(v, erroConclusao: e);
+    }
+  }
+
+  /// Erros após os quais o serviço pode ter concluído sem o aplicativo saber.
+  static bool _podeTerConcluido(ErroDominio e) =>
+      _repetivel(e) || e.codigo == CodigoErro.validacaoJaConcluida;
+
+  static bool _repetivel(ErroDominio e) =>
+      e.codigo == CodigoErro.semConexao ||
+      e.codigo == CodigoErro.dependenciaIndisponivel;
+
+  Future<Validacao?> _consultarSemFalhar(String idValidacao) async {
+    try {
+      return await _servico.consultar(idValidacao);
+    } on ErroDominio {
+      return null; // mantém o erro original da conclusão
     }
   }
 
@@ -207,3 +239,6 @@ final validacaoProvider =
     NotifierProvider<ValidacaoControlador, EstadoValidacao>(
       ValidacaoControlador.new,
     );
+
+/// Espera entre reenvios da conclusão; substituível nos testes.
+final esperaDeReenvioProvider = Provider<Esperar>((_) => Future<void>.delayed);

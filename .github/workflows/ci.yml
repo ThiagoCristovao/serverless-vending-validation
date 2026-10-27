@@ -1,6 +1,7 @@
 # Verificações do repositório. Roda sem credenciais GCP.
-# Jobs: Terraform (fmt/validate), OpenAPI (lint), Go (servico e sistema-central-simulado)
-# e Flutter (aplicativo). A suíte e2e (Sprint 8) só é compilada aqui; executa com `make e2e`.
+# Jobs: Terraform (fmt/validate), OpenAPI (lint), Go (servico, sistema-central-simulado e
+# ferramentas/injecao-falhas) e Flutter (aplicativo). A suíte e2e (Sprint 8) e os experimentos
+# (Sprint 9) só são compilados aqui; executam com `make e2e` e `make experimento`.
 name: CI
 
 on:
@@ -52,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        modulo: [servico, sistema-central-simulado]
+        modulo: [servico, sistema-central-simulado, ferramentas/injecao-falhas]
     defaults:
       run:
         working-directory: ${{ matrix.modulo }}

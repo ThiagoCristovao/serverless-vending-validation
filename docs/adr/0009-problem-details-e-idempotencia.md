@@ -52,6 +52,15 @@ validações nem duas rotações de código.
   (ver `docs/modelo-dados.md`).
 - Chaves de idempotência antigas devem expirar junto com a validação para não crescer sem limite.
 
+## Nota (27/10/2026, Sprint 9)
+
+O cenário D4 da avaliação de resiliência mostrou que o aplicativo consultava `GET` após uma
+falha de rede na conclusão, mas nunca reenviava: se a consulta devolvia "aberta", a tela exigia
+um novo toque, e sob intermitência estrita o fluxo não completava. O controlador passou a reenviar
+a conclusão com as esperas do item 4 (1 s, 2 s, 4 s) quando a consulta confirma a validação
+aberta, pois a consulta prova que nada foi aplicado, e a tratar `validacao_ja_concluida`
+consultando e exibindo a conclusão. Ver `docs/avaliacao/resiliencia.md`, seção 3.1.
+
 ## Referências
 
 - RFC 9457, *Problem Details for HTTP APIs*; IETF draft *The Idempotency-Key HTTP Header Field*.
