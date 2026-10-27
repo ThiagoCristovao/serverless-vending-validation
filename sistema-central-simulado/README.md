@@ -8,7 +8,7 @@ Sustenta a suíte de ponta a ponta da Sprint 8 e os cenários de resiliência da
 | Sprint | Estado | Conteúdo |
 |---|---|---|
 | 8 | **concluída** (suíte e2e executada contra `svv-dev` em 26/10/2026) | consumidor idempotente com registro em JSON Lines, interruptor de falhas, API administrativa, testes com Pub/Sub falso em processo e suíte e2e (fluxo principal, duplicatas, DLQ) |
-| 9 | **em andamento** | `cmd/experimento`: cenários de injeção de falhas no lado do serviço (sistema central, Pub/Sub e Firestore indisponíveis) com relatório de evidências; pacote `laboratorio` compartilhado com a e2e |
+| 9 | **concluída** (experimentos executados contra `svv-dev` em 27/10/2026) | `cmd/experimento`: cenários de injeção de falhas no lado do serviço (sistema central, Pub/Sub e Firestore indisponíveis) com relatório de evidências; pacote `laboratorio` compartilhado com a e2e |
 
 ## Comportamento
 
