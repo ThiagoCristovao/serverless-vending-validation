@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../compartilhado/conectividade.dart';
 import '../../compartilhado/erros.dart';
 
 /// Acesso ao Firebase Authentication; substituível nos testes.
@@ -30,9 +31,22 @@ class AutenticacaoControlador extends AsyncNotifier<void> {
             .read(firebaseAuthProvider)
             .signInWithEmailAndPassword(email: email.trim(), password: senha);
       } on FirebaseAuthException catch (e) {
-        throw traduzir(e);
+        throw qualificar(
+          traduzir(e),
+          conectado: ref.read(conectividadeProvider).value ?? true,
+        );
       }
     });
+  }
+
+  /// CE-05: o SDK devolve `network-request-failed` tanto sem rede quanto com o
+  /// provedor fora do ar. Com a rede no ar, a mensagem correta ao operador é
+  /// "autenticação indisponível" (verificado na Sprint 9 com bloqueio DNS).
+  static ErroDominio qualificar(ErroDominio erro, {required bool conectado}) {
+    if (erro.codigo == CodigoErro.semConexao && conectado) {
+      return ErroDominio(CodigoErro.autenticacaoIndisponivel, erro.mensagem);
+    }
+    return erro;
   }
 
   Future<void> sair() async {

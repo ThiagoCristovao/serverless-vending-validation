@@ -8,6 +8,7 @@ Sustenta a suíte de ponta a ponta da Sprint 8 e os cenários de resiliência da
 | Sprint | Estado | Conteúdo |
 |---|---|---|
 | 8 | **concluída** (suíte e2e executada contra `svv-dev` em 26/10/2026) | consumidor idempotente com registro em JSON Lines, interruptor de falhas, API administrativa, testes com Pub/Sub falso em processo e suíte e2e (fluxo principal, duplicatas, DLQ) |
+| 9 | **em andamento** | `cmd/experimento`: cenários de injeção de falhas no lado do serviço (sistema central, Pub/Sub e Firestore indisponíveis) com relatório de evidências; pacote `laboratorio` compartilhado com a e2e |
 
 ## Comportamento
 
@@ -38,12 +39,14 @@ Sustenta a suíte de ponta a ponta da Sprint 8 e os cenários de resiliência da
 
 ```
 cmd/central/main.go              flags/variáveis SVV_CENTRAL_*: projeto, assinatura, arquivo, porta, impersonar
+cmd/experimento/                 Sprint 9: cenários de injeção de falhas e relatório Markdown (make experimento)
 internal/
 ├── eventos/                     contrato dos eventos (decodificação e validação; campos extras tolerados)
 ├── armazenamento/               registro JSON Lines + índice por (idValidacao, tipo)
 ├── falhas/                      interruptor de indisponibilidade
 ├── consumidor/                  Processador (decisão ack/nack, estatísticas) e Consumidor (Pub/Sub, pausa/retomada)
-└── admin/                       API HTTP
+├── admin/                       API HTTP
+└── laboratorio/                 ambiente, operador de testes, adesivos assinados, gateway e consumidor em processo
 e2e/                             suíte de ponta a ponta (tag `e2e`): fluxo principal, duplicatas, DLQ
 ```
 
@@ -54,6 +57,7 @@ make central-verificar     # vet + testes (Pub/Sub falso em processo: ordenaçã
 make central-executar      # consome svv-dev-sistema-central; API em :8090
 make e2e-preparar          # uma vez: semeia VM-E2E1 e VM-E2E2 no Firestore de dev
 make e2e                   # suíte e2e contra svv-dev (~5 min); E2E_ARGS=-short pula o cenário de DLQ
+make experimento CENARIO=central-indisponivel   # Sprint 9; também publicacao-indisponivel, firestore-indisponivel, restaurar
 ```
 
 Variáveis do comando (`SVV_CENTRAL_PROJETO`, `SVV_CENTRAL_ASSINATURA`, `SVV_CENTRAL_ARQUIVO`,

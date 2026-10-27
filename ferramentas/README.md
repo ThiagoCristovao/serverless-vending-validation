@@ -10,7 +10,9 @@ Utilitários que não fazem parte do produto, mas sustentam o desenvolvimento e 
 | `emuladores/` | aqui | 5 | `docker-compose.yml` com os emuladores do Firestore e do Pub/Sub para os testes de integração |
 | `central` | `sistema-central-simulado/cmd/central` | 8 | Sistema central simulado: consome a assinatura, registra eventos de forma idempotente e expõe a API administrativa (falhas, pausa) |
 | suíte e2e | `sistema-central-simulado/e2e` | 8 | Testes de ponta a ponta contra o ambiente dev (`make e2e`): fluxo principal, duplicatas e DLQ |
-| `injecao-falhas/` | aqui | 9 | Scripts que desligam o consumidor, simulam rede intermitente e indisponibilidade da autenticação |
+| `experimento` | `sistema-central-simulado/cmd/experimento` | 9 | Cenários de injeção de falhas no lado do serviço (sistema central, Pub/Sub e Firestore indisponíveis) com relatório de evidências (`make experimento`) |
+| `proxy-rede` | `injecao-falhas/cmd/proxy-rede` | 9 | Proxy HTTP entre o aplicativo e o gateway que corta, atrasa, responde 503 ou descarta respostas (`make injecao-proxy`) |
+| `dns-bloqueio.sh` | `injecao-falhas/` | 9 | `dnsmasq` que torna o Firebase Authentication irresolúvel para o celular (`make injecao-dns`) |
 | `carga/` | aqui | 10 | Scripts k6 para os testes de carga e coleta de p50/p95/p99, cold start e regime contínuo |
 
 As ferramentas em Go vivem dentro do módulo `servico` para reutilizar o domínio (assinatura do

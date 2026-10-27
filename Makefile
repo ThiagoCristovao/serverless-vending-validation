@@ -35,6 +35,7 @@ endif
         servico-integracao servico-local emuladores-subir emuladores-parar \
         app-analisar app-testar app-verificar app-apk app-executar \
         central-formatar central-formatar-verificar central-verificar central-executar e2e-preparar e2e \
+        experimento injecao-formatar-verificar injecao-verificar injecao-proxy injecao-dns app-apk-injecao \
         infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
         infra-dev-init infra-dev-plan infra-dev-apply segredo-hmac-gerar app-google-services
 
@@ -42,6 +43,12 @@ endif
 PROJETO_ID ?= $(shell gcloud config get-value project 2>/dev/null)
 PREFIXO ?= svv-dev
 E2E_OPERADOR_EMAIL ?= operador1@exemplo.invalid
+# Variáveis SVV_E2E_* usadas pela suíte e2e e pelos experimentos (rodam em sistema-central-simulado/).
+E2E_AMBIENTE = SVV_E2E_PROJETO="$(PROJETO_ID)" SVV_E2E_PREFIXO="$(PREFIXO)" SVV_E2E_GATEWAY="https://$$($(TERRAFORM) -chdir=../infra/ambientes/dev output -raw gateway_hostname)/v1" SVV_E2E_GOOGLE_SERVICES="$(CURDIR)/aplicativo/android/app/google-services.json" SVV_E2E_OPERADOR_EMAIL="$(E2E_OPERADOR_EMAIL)" SVV_E2E_OPERADOR_SENHA="$$(cat "$(CURDIR)/chaves/operador1.senha")" SVV_E2E_CHAVE_PRIVADA="$(CURDIR)/chaves/chave-privada-qr.txt"
+# Injeção de falhas no dispositivo (Sprint 9).
+IP_LOCAL ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
+MODO ?= normal
+CENARIO ?= central-indisponivel
 
 ajuda: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
@@ -50,7 +57,7 @@ configurar: ## Instala o toolchain fixado (mise) e o Flutter (FVM)
 	mise install
 	cd aplicativo && fvm install
 
-verificar: infra-formatar-verificar infra-validar api-lint servico-formatar-verificar servico-verificar central-formatar-verificar central-verificar app-verificar ## Executa todas as verificações locais (o mesmo que a CI)
+verificar: infra-formatar-verificar infra-validar api-lint servico-formatar-verificar servico-verificar central-formatar-verificar central-verificar injecao-formatar-verificar injecao-verificar app-verificar ## Executa todas as verificações locais (o mesmo que a CI)
 
 infra-formatar: ## Formata os arquivos Terraform
 	$(TERRAFORM) fmt -recursive infra
@@ -112,15 +119,25 @@ e2e-preparar: ## Semeia as máquinas VM-E2E1 e VM-E2E2 no Firestore do ambiente 
 	done
 
 e2e: ## Suíte de ponta a ponta contra o ambiente dev, com o consumidor em processo (exige chaves/ e make e2e-preparar; ~5 min)
-	cd sistema-central-simulado && \
-	SVV_E2E_PROJETO="$(PROJETO_ID)" \
-	SVV_E2E_PREFIXO="$(PREFIXO)" \
-	SVV_E2E_GATEWAY="https://$$($(TERRAFORM) -chdir=../infra/ambientes/dev output -raw gateway_hostname)/v1" \
-	SVV_E2E_GOOGLE_SERVICES="$(CURDIR)/aplicativo/android/app/google-services.json" \
-	SVV_E2E_OPERADOR_EMAIL="$(E2E_OPERADOR_EMAIL)" \
-	SVV_E2E_OPERADOR_SENHA="$$(cat "$(CURDIR)/chaves/operador1.senha")" \
-	SVV_E2E_CHAVE_PRIVADA="$(CURDIR)/chaves/chave-privada-qr.txt" \
-	go test -tags e2e ./e2e/ -count=1 -v -timeout 25m $(E2E_ARGS)
+	cd sistema-central-simulado && $(E2E_AMBIENTE) go test -tags e2e ./e2e/ -count=1 -v -timeout 25m $(E2E_ARGS)
+
+experimento: ## Cenário de injeção de falhas contra o ambiente dev, com relatório em docs/avaliacao/evidencias (CENARIO=central-indisponivel|publicacao-indisponivel|firestore-indisponivel|restaurar)
+	cd sistema-central-simulado && $(E2E_AMBIENTE) go run ./cmd/experimento -cenario "$(CENARIO)" -saida "$(CURDIR)/docs/avaliacao/evidencias/$(CENARIO).md" $(EXPERIMENTO_ARGS)
+
+injecao-formatar-verificar: ## Falha se houver Go das ferramentas de injeção de falhas fora do padrão gofmt
+	@cd ferramentas/injecao-falhas && fora="$$(gofmt -l .)"; if [ -n "$$fora" ]; then echo "fora do gofmt:"; echo "$$fora"; exit 1; fi
+
+injecao-verificar: ## go vet e testes das ferramentas de injeção de falhas
+	cd ferramentas/injecao-falhas && go vet ./... && go test ./... -count=1
+
+injecao-proxy: ## Proxy de falhas de rede para o celular na porta 8099 (MODO=normal|cortar|atrasar|indisponivel|cortar-resposta|intermitente)
+	cd ferramentas/injecao-falhas && go run ./cmd/proxy-rede -destino "https://$$($(TERRAFORM) -chdir=../../infra/ambientes/dev output -raw gateway_hostname)" -modo "$(MODO)"
+
+injecao-dns: ## Bloqueia a resolução do Firebase Authentication para o celular (dnsmasq na porta 53; pede sudo)
+	ferramentas/injecao-falhas/dns-bloqueio.sh
+
+app-apk-injecao: ## APK de depuração apontando para o proxy de falhas neste computador (IP_LOCAL=$(IP_LOCAL))
+	cd aplicativo && fvm flutter build apk --debug --dart-define=SVV_API_BASE=http://$(IP_LOCAL):8099/v1
 
 infra-bootstrap-init: ## Inicializa o bootstrap (estado local, roda uma vez por projeto)
 	$(TERRAFORM) -chdir=infra/bootstrap init -input=false

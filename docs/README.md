@@ -8,6 +8,7 @@
 | [modelo-dados.md](modelo-dados.md) | Coleções do Firestore, índices, regras e esquema dos eventos Pub/Sub | 1 |
 | [arquitetura.md](arquitetura.md) | Componentes, fluxos, mensageria, segurança, cenários de exceção, telas | 2 |
 | [diagramas/](diagramas/) | Fontes Mermaid dos diagramas usados na arquitetura e na monografia | 2 |
+| [avaliacao/resiliencia.md](avaliacao/resiliencia.md) | Relatório de resiliência e independência: cenários de injeção de falhas, evidências e conclusões | 9 |
 | [adr/](adr/) | Registros de decisão de arquitetura (ADR) | todas |
 | [operacao/configuracao-ambiente.md](operacao/configuracao-ambiente.md) | Toolchain, projeto GCP, bootstrap, ambiente dev, teste do serviço, ecossistema completo e suíte e2e | 0, 5, 8 |
 | [operacao/convencoes.md](operacao/convencoes.md) | Idioma, branches, commits, ADRs, nomes de recursos | 0 |
