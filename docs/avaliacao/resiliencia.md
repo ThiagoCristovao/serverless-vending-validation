@@ -46,8 +46,8 @@ os sinais operacionais da falha, com o alerta de backlog configurado para 10 min
 
 Executado em 27/10/2026 ([evidência](evidencias/publicacao-indisponivel.md)). O vínculo
 `roles/pubsub.publisher` da conta da função foi removido do tópico; a falha ficou ativa
-1 min 19 s depois (a primeira validação cujo marcador `eventos.iniciadaPublicadaEm` ficou nulo). Com a
-publicação indisponível, foram feitas 6 validações completas; o vínculo foi restaurado após
+1 min 19 s depois (a primeira validação cujo marcador `eventos.iniciadaPublicadaEm` ficou nulo).
+Com a publicação indisponível, foram feitas 6 validações completas; o vínculo foi restaurado após
 1 min 28 s de falha e a reconciliação periódica do Cloud Scheduler (ADR-0012) republicou as
 pendências.
 
@@ -124,8 +124,9 @@ distingui-los pelo estado de conectividade do aparelho.
 ## 5. Observações e limitações
 
 - **Propagação de IAM.** A remoção de um vínculo levou de 59 s a 1 min 19 s (tópico, duas
-  execuções) e 1 min 37 s (projeto) para surtir efeito; a restauração não foi monotônica (ver C). Os experimentos sondam o serviço até
-  observar o efeito e registram esses tempos, que fazem parte da evidência.
+  execuções) e 1 min 37 s (projeto) para surtir efeito; a restauração não foi monotônica (ver C).
+  Os experimentos sondam o serviço até observar o efeito e registram esses tempos, que fazem
+  parte da evidência.
 - **Granularidade das métricas.** As métricas do Pub/Sub no Monitoring têm um ponto por minuto e
   atraso de cerca de 1 min; por isso o backlog aparece em patamares (6, 12) e a amostra posterior à
   retomada ainda mostra 6.
