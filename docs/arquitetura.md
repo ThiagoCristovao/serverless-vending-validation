@@ -162,7 +162,8 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
   por estado; erros em Problem Details com `codigo` estável (ADR-0009).
 - **Aplicativo:** até 3 reenvios com espera 1 s, 2 s, 4 s para erro de rede, tempo esgotado e
   `503`; um reenvio após renovar o token em `401`; nunca para outros `4xx`. Antes de reenviar uma
-  conclusão, consulta `GET /validacoes/{id}`. Diagrama:
+  conclusão, consulta `GET /validacoes/{id}`: se já concluída, exibe a conclusão; se ainda aberta,
+  reenvia com as mesmas esperas (Sprint 9, ADR-0009). Diagrama:
   [diagramas/sequencia-falha-rede.mmd](diagramas/sequencia-falha-rede.mmd).
 - **Consumidor:** `ack` só após persistir; `nack` em falha; duplicatas ignoradas.
 

@@ -92,7 +92,11 @@ Future<ProviderContainer> montar(
   ServicoFalso servico,
 ) async {
   final container = ProviderContainer(
-    overrides: [servicoValidacaoProvider.overrideWithValue(servico)],
+    overrides: [
+      servicoValidacaoProvider.overrideWithValue(servico),
+      // Reenvios da conclusão sem espera real.
+      esperaDeReenvioProvider.overrideWithValue((_) async {}),
+    ],
   );
   addTearDown(container.dispose);
   await tester.pumpWidget(
@@ -276,8 +280,8 @@ void main() {
         ..aoIniciar.add(() async => abertaExemplo())
         ..aoConcluir.add(
           () async => throw const ErroDominio(
-            CodigoErro.validacaoJaConcluida,
-            'já concluída',
+            CodigoErro.validacaoNaoEncontrada,
+            'não encontrada',
           ),
         );
       final container = await montar(tester, servico);
@@ -286,13 +290,104 @@ void main() {
 
       await preencherEConcluir(tester);
       expect(
-        find.text(mensagemParaOperador(CodigoErro.validacaoJaConcluida)),
+        find.text(mensagemParaOperador(CodigoErro.validacaoNaoEncontrada)),
         findsOneWidget,
       );
       expect(
         find.text('4729'),
         findsOneWidget,
         reason: 'a tela continua na validação aberta',
+      );
+      expect(
+        servico.chamadas.where((c) => c.startsWith('consultar')),
+        isEmpty,
+        reason: 'erro de negócio não dispara consulta nem reenvio',
+      );
+    },
+  );
+
+  testWidgets(
+    'validação já concluída por um envio anterior: consulta e exibe a conclusão',
+    (tester) async {
+      final servico = ServicoFalso()
+        ..aoIniciar.add(() async => abertaExemplo())
+        ..aoConcluir.add(
+          () async => throw const ErroDominio(
+            CodigoErro.validacaoJaConcluida,
+            'já concluída',
+          ),
+        )
+        ..aoConsultar.add(() async => concluidaExemplo());
+      final container = await montar(tester, servico);
+      await container.read(validacaoProvider.notifier).iniciar(payload);
+      await tester.pumpAndSettle();
+
+      await preencherEConcluir(tester);
+      expect(find.text('Máquina VM-2047 validada'), findsOneWidget);
+      expect(servico.chamadas.last, 'consultar:01J8ZK3V9Q7XW2N4M6P8R0T2Y4');
+    },
+  );
+
+  testWidgets(
+    'conclusão cortada antes de chegar: a consulta confirma aberta e o reenvio conclui (RF-23)',
+    (tester) async {
+      final servico = ServicoFalso()
+        ..aoIniciar.add(() async => abertaExemplo())
+        ..aoConcluir.add(
+          () async =>
+              throw const ErroDominio(CodigoErro.semConexao, 'sem rede'),
+        )
+        ..aoConsultar.add(() async => abertaExemplo())
+        ..aoConcluir.add(
+          () async => Conclusao(
+            idValidacao: '01J8ZK3V9Q7XW2N4M6P8R0T2Y4',
+            status: StatusValidacao.concluida,
+            concluidaEm: agora,
+            codigoRotacionado: true,
+          ),
+        );
+      final container = await montar(tester, servico);
+      await container.read(validacaoProvider.notifier).iniciar(payload);
+      await tester.pumpAndSettle();
+
+      await preencherEConcluir(tester);
+      expect(find.text('Máquina VM-2047 validada'), findsOneWidget);
+      expect(servico.chamadas, [
+        servico.chamadas.first,
+        'concluir:01J8ZK3V9Q7XW2N4M6P8R0T2Y4:14832:true',
+        'consultar:01J8ZK3V9Q7XW2N4M6P8R0T2Y4',
+        'concluir:01J8ZK3V9Q7XW2N4M6P8R0T2Y4:14832:true',
+      ]);
+    },
+  );
+
+  testWidgets(
+    'reenvios da conclusão esgotados: mantém a validação aberta com "Sem conexão"',
+    (tester) async {
+      final servico = ServicoFalso()
+        ..aoIniciar.add(() async => abertaExemplo());
+      for (var i = 0; i < 4; i++) {
+        servico
+          ..aoConcluir.add(
+            () async =>
+                throw const ErroDominio(CodigoErro.semConexao, 'sem rede'),
+          )
+          ..aoConsultar.add(() async => abertaExemplo());
+      }
+      final container = await montar(tester, servico);
+      await container.read(validacaoProvider.notifier).iniciar(payload);
+      await tester.pumpAndSettle();
+
+      await preencherEConcluir(tester);
+      expect(
+        find.text(mensagemParaOperador(CodigoErro.semConexao)),
+        findsOneWidget,
+      );
+      expect(find.text('4729'), findsOneWidget);
+      expect(
+        servico.chamadas.where((c) => c.startsWith('concluir')).length,
+        4,
+        reason: 'envio original e três reenvios (1 s, 2 s, 4 s)',
       );
     },
   );

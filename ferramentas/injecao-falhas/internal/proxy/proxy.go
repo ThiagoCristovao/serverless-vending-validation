@@ -190,6 +190,10 @@ func (p *Proxy) encaminhar(w http.ResponseWriter, r *http.Request) {
 	inicio := time.Now()
 	modo, cfg := p.decidir()
 	campos := []any{"metodo", r.Method, "caminho", r.URL.Path, "modoAplicado", string(modo)}
+	if chave := r.Header.Get("Idempotency-Key"); chave != "" {
+		// Evidência de que os reenvios do aplicativo repetem a mesma chave (RF-23).
+		campos = append(campos, "chaveIdempotencia", chave)
+	}
 
 	switch modo {
 	case ModoCortar:

@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Bloqueia, para o celular, a resolução dos hosts do Firebase Authentication
 # (Sprint 9: provedor de autenticação indisponível). Sobe um dnsmasq que
-# responde NXDOMAIN para identitytoolkit.googleapis.com e
-# securetoken.googleapis.com e encaminha o resto a resolvedores públicos.
+# responde NXDOMAIN para os hosts usados pelo SDK Android do Firebase Auth e
+# encaminha o resto a resolvedores públicos:
+#   - www.googleapis.com (identitytoolkit/v3: entrar com e-mail e senha);
+#   - identitytoolkit.googleapis.com (API v1, usada pelos SDKs mais novos);
+#   - securetoken.googleapis.com (renovação do ID token).
+# O gateway (*.gateway.dev) continua resolvendo normalmente.
 #
 # No celular, nas opções da rede Wi-Fi, troque o IP para "Estático" e aponte o
 # DNS 1 para o IP deste computador (impresso abaixo). Desfaça ao terminar.
@@ -13,7 +17,7 @@ set -euo pipefail
 
 PORTA="${1:-53}"
 IP="${IP_LOCAL:-$(ip -4 route get 1.1.1.1 | awk '{print $7; exit}')}"
-BLOQUEADOS=(identitytoolkit.googleapis.com securetoken.googleapis.com)
+BLOQUEADOS=(www.googleapis.com identitytoolkit.googleapis.com securetoken.googleapis.com)
 
 ARGS=(--no-daemon --port="$PORTA" --listen-address="$IP" --listen-address=127.0.0.1 --bind-interfaces
       --no-resolv --no-hosts --cache-size=0 --server=8.8.8.8 --server=1.1.1.1
