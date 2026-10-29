@@ -13,7 +13,7 @@ Utilitários que não fazem parte do produto, mas sustentam o desenvolvimento e 
 | `experimento` | `sistema-central-simulado/cmd/experimento` | 9 | Cenários de injeção de falhas no lado do serviço (sistema central, Pub/Sub e Firestore indisponíveis) com relatório de evidências (`make experimento`) |
 | `proxy-rede` | `injecao-falhas/cmd/proxy-rede` | 9 | Proxy HTTP entre o aplicativo e o gateway que corta, atrasa, responde 503 ou descarta respostas (`make injecao-proxy`) |
 | `dns-bloqueio.sh` | `injecao-falhas/` | 9 | `dnsmasq` que torna o Firebase Authentication irresolúvel para o celular (`make injecao-dns`) |
-| `carga/` | aqui | 10 | Scripts k6 para os testes de carga e coleta de p50/p95/p99, cold start e regime contínuo |
+| `carga` | `sistema-central-simulado/cmd/carga` | 10 | Teste de carga em laço fechado com operadores virtuais (`make carga-preparar`, `make carga`) e medição de cold start (`make carga-frio`), com relatório de evidências (ADR-0015) |
 
 As ferramentas em Go vivem dentro do módulo `servico` para reutilizar o domínio (assinatura do
 QR, documentos do Firestore). Exemplo de preparação de um ambiente para testes manuais:

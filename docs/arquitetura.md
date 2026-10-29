@@ -10,9 +10,9 @@ Fontes dos diagramas em [diagramas/](diagramas/). Decisões em [adr/](adr/).
 
 | Atributo (objetivo geral) | Como a arquitetura o sustenta | Onde é avaliado |
 |---|---|---|
-| **Resiliência operacional** | Persistência antes da publicação; mensagens retidas no Pub/Sub com retentativa e DLQ; idempotência de ponta a ponta; retentativa no dispositivo | Sprint 9 |
-| **Escalabilidade** | Função serverless com escala automática e concorrência por instância; Firestore e Pub/Sub gerenciados; nenhum estado em memória | Sprint 10 |
-| **Independência do sistema central** | O sistema central só recebe eventos assíncronos; nenhuma chamada síncrona a ele no caminho do operador | Sprint 9 |
+| **Resiliência operacional** | Persistência antes da publicação; mensagens retidas no Pub/Sub com retentativa e DLQ; idempotência de ponta a ponta; retentativa no dispositivo | Sprint 9: [avaliacao/resiliencia.md](avaliacao/resiliencia.md) |
+| **Escalabilidade** | Função serverless com escala automática e concorrência por instância; Firestore e Pub/Sub gerenciados; nenhum estado em memória | Sprint 10: [avaliacao/escalabilidade.md](avaliacao/escalabilidade.md) |
+| **Independência do sistema central** | O sistema central só recebe eventos assíncronos; nenhuma chamada síncrona a ele no caminho do operador | Sprint 9: [avaliacao/resiliencia.md](avaliacao/resiliencia.md); comparação qualitativa em [avaliacao/analise-comparativa.md](avaliacao/analise-comparativa.md) |
 
 ## 2. Componentes
 
@@ -232,7 +232,7 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0014](adr/0014-injecao-de-falhas-por-iam-proxy-e-dns.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0015](adr/0015-teste-de-carga-em-laco-fechado-e-configuracoes-da-funcao.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:

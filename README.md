@@ -110,6 +110,8 @@ remoto.
 | `make central-executar` | Roda o sistema central simulado contra o ambiente dev (API em `:8090`) |
 | `make e2e` | Suíte de ponta a ponta contra o ambiente dev (Sprint 8) |
 | `make experimento CENARIO=…` | Cenário de injeção de falhas com relatório de evidências (Sprint 9) |
+| `make carga OPERADORES=… CONFIGURACAO=…` | Teste de carga com operadores virtuais e relatório de evidências (Sprint 10) |
+| `make carga-frio CONFIGURACAO=…` | Medição de cold start após inatividade (Sprint 10) |
 
 ## Convenções
 

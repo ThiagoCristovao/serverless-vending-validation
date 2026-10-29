@@ -26,6 +26,24 @@ variable "funcao_min_instancias" {
   default     = 0
 }
 
+variable "funcao_max_instancias" {
+  type        = number
+  description = "Limite de instâncias da função (controle de custo). 10 em uso normal; elevado só durante os testes de carga (Sprint 10)."
+  default     = 10
+}
+
+variable "funcao_concorrencia" {
+  type        = number
+  description = "Requisições simultâneas por instância da função. Nulo mantém o padrão (1); comparado com 80 nos testes de carga (Sprint 10)."
+  default     = null
+}
+
+variable "funcao_cpu" {
+  type        = string
+  description = "vCPU por instância da função. Nulo mantém o padrão (1/6); \"1\" quando a concorrência é maior que 1."
+  default     = null
+}
+
 variable "gateway_caminho_base_backend" {
   type        = string
   description = "Sufixo acrescentado à URL da função no roteamento do gateway (ver módulo gateway)."

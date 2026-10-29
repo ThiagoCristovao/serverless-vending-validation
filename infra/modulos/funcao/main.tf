@@ -57,13 +57,15 @@ resource "google_cloudfunctions2_function" "validacao" {
   }
 
   service_config {
-    available_memory               = var.memoria
-    timeout_seconds                = var.tempo_limite_segundos
-    max_instance_count             = var.max_instancias
-    min_instance_count             = var.min_instancias
-    ingress_settings               = "ALLOW_ALL"
-    all_traffic_on_latest_revision = true
-    service_account_email          = var.conta_funcao_email
+    available_memory                 = var.memoria
+    timeout_seconds                  = var.tempo_limite_segundos
+    max_instance_count               = var.max_instancias
+    min_instance_count               = var.min_instancias
+    max_instance_request_concurrency = var.concorrencia
+    available_cpu                    = var.cpu
+    ingress_settings                 = "ALLOW_ALL"
+    all_traffic_on_latest_revision   = true
+    service_account_email            = var.conta_funcao_email
 
     environment_variables = {
       SVV_PROJETO_ID        = var.projeto_id

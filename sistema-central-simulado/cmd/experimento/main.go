@@ -29,12 +29,12 @@ import (
 
 type experimento struct {
 	cfg               laboratorio.Configuracao
-	rel               *Relatorio
+	rel               *laboratorio.Relatorio
 	gateway           *laboratorio.Gateway
 	adesivo           *laboratorio.Adesivo
 	operador          laboratorio.Operador
 	pubsub            *pubsub.Client
-	nuvem             *Nuvem
+	nuvem             *laboratorio.Nuvem
 	central           *laboratorio.ConsumidorLocal
 	validacoes        int
 	indisponibilidade time.Duration
@@ -62,7 +62,7 @@ func main() {
 		falhar(err)
 	}
 	x := &experimento{cfg: cfg, validacoes: *n, indisponibilidade: *dur, prazoRecuperacao: *prazo}
-	x.rel = NovoRelatorio(titulo(*cenario))
+	x.rel = laboratorio.NovoRelatorio(titulo(*cenario))
 	x.rel.Parametro("projeto", cfg.Projeto)
 	x.rel.Parametro("gateway", cfg.Gateway)
 	x.rel.Parametro("validações durante a falha", *n)
@@ -71,7 +71,7 @@ func main() {
 		falhar(err)
 	}
 	defer x.pubsub.Close()
-	if x.nuvem, err = NovaNuvem(ctx, cfg.Projeto, x.pubsub); err != nil {
+	if x.nuvem, err = laboratorio.NovaNuvem(ctx, cfg.Projeto, x.pubsub); err != nil {
 		falhar(err)
 	}
 	defer x.nuvem.Fechar()

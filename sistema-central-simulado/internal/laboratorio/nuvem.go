@@ -1,4 +1,4 @@
-package main
+package laboratorio
 
 import (
 	"context"
@@ -83,8 +83,12 @@ func (n *Nuvem) Metrica(ctx context.Context, tipo, assinatura string, desde time
 			amostras = append(amostras, Amostra{Quando: quando, Valor: v})
 		}
 	}
-	slices.SortFunc(amostras, func(a, b Amostra) int { return a.Quando.Compare(b.Quando) })
+	ordenar(amostras)
 	return amostras, nil
+}
+
+func ordenar(amostras []Amostra) {
+	slices.SortFunc(amostras, func(a, b Amostra) int { return a.Quando.Compare(b.Quando) })
 }
 
 // Backlog lê num_undelivered_messages da assinatura.
@@ -102,8 +106,13 @@ type EntradaLog struct {
 	Quando     time.Time
 	Severidade string
 	Mensagem   string
-	// Requisicao resume o httpRequest do log de acesso do Cloud Run, se houver.
+	// Requisicao resume o httpRequest do log de acesso do Cloud Run, se houver;
+	// Metodo, Caminho, Status e Latencia trazem os mesmos dados em campos.
 	Requisicao string
+	Metodo     string
+	Caminho    string
+	Status     int
+	Latencia   time.Duration
 	Campos     map[string]any
 }
 
@@ -147,6 +156,8 @@ func (n *Nuvem) EntradasDaFuncao(ctx context.Context, nomeFuncao string, desde t
 		entrada := EntradaLog{Quando: quando, Severidade: e.Severity, Mensagem: e.TextPayload}
 		if r := e.HttpRequest; r != nil {
 			entrada.Requisicao = fmt.Sprintf("%s %s → %d em %s", r.RequestMethod, caminhoDe(r.RequestUrl), r.Status, r.Latency)
+			entrada.Metodo, entrada.Caminho, entrada.Status = r.RequestMethod, caminhoDe(r.RequestUrl), int(r.Status)
+			entrada.Latencia, _ = time.ParseDuration(r.Latency)
 		}
 		if len(e.JsonPayload) > 0 {
 			_ = json.Unmarshal(e.JsonPayload, &entrada.Campos)

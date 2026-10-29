@@ -49,6 +49,10 @@ E2E_AMBIENTE = SVV_E2E_PROJETO="$(PROJETO_ID)" SVV_E2E_PREFIXO="$(PREFIXO)" SVV_
 IP_LOCAL ?= $(shell ip -4 route get 1.1.1.1 2>/dev/null | awk '{print $$7; exit}')
 MODO ?= normal
 CENARIO ?= central-indisponivel
+# Testes de carga (Sprint 10).
+OPERADORES ?= 10
+CONFIGURACAO ?= A
+CARGA_AMBIENTE = $(E2E_AMBIENTE) SVV_CARGA_SENHA="$$(cat "$(CURDIR)/chaves/carga.senha")" SVV_CARGA_LOTE="$(CURDIR)/chaves/carga-lote.json"
 
 ajuda: ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-28s\033[0m %s\n", $$1, $$2}'
@@ -123,6 +127,17 @@ e2e: ## Suíte de ponta a ponta contra o ambiente dev, com o consumidor em proce
 
 experimento: ## Cenário de injeção de falhas contra o ambiente dev, com relatório em docs/avaliacao/evidencias (CENARIO=central-indisponivel|publicacao-indisponivel|firestore-indisponivel|restaurar)
 	cd sistema-central-simulado && $(E2E_AMBIENTE) go run ./cmd/experimento -cenario "$(CENARIO)" -saida "$(CURDIR)/docs/avaliacao/evidencias/$(CENARIO).md" $(EXPERIMENTO_ARGS)
+
+carga-preparar: ## Cria OPERADORES=100 operadores virtuais (Firebase Auth) e máquinas VM-CARGA-NNN no Firestore do dev (uma vez; exige chaves/)
+	@test -s chaves/carga.senha || (openssl rand -base64 18 | tr -d '\n' > chaves/carga.senha && chmod 600 chaves/carga.senha && echo "senha dos operadores de carga gerada em chaves/carga.senha")
+	cd sistema-central-simulado && $(CARGA_AMBIENTE) go run ./cmd/carga -cenario preparar -operadores "$(OPERADORES)"
+	cd servico && go run ./cmd/semear-firestore -projeto "$(PROJETO_ID)" -lote ../chaves/carga-lote.json -chave-publica ../chaves/chave-publica-qr.txt
+
+carga: ## Teste de carga com OPERADORES=10|50|100 operadores e CONFIGURACAO=A|C, relatório em docs/avaliacao/evidencias/carga-<conf>-<n>.md (CARGA_ARGS="-duracao 2m -rampa 30s -pausa 1s")
+	cd sistema-central-simulado && $(CARGA_AMBIENTE) go run ./cmd/carga -cenario carga -operadores "$(OPERADORES)" -configuracao "$(CONFIGURACAO)" -saida "$(CURDIR)/docs/avaliacao/evidencias/carga-$(CONFIGURACAO)-$(OPERADORES).md" $(CARGA_ARGS)
+
+carga-frio: ## Cold start após inatividade (pausa o agendador; ~2 h) com CONFIGURACAO=min0|min1, relatório em docs/avaliacao/evidencias/cold-start-<conf>.md
+	cd sistema-central-simulado && $(E2E_AMBIENTE) go run ./cmd/carga -cenario frio -configuracao "$(CONFIGURACAO)" -saida "$(CURDIR)/docs/avaliacao/evidencias/cold-start-$(CONFIGURACAO).md" $(CARGA_ARGS)
 
 injecao-formatar-verificar: ## Falha se houver Go das ferramentas de injeção de falhas fora do padrão gofmt
 	@cd ferramentas/injecao-falhas && fora="$$(gofmt -l .)"; if [ -n "$$fora" ]; then echo "fora do gofmt:"; echo "$$fora"; exit 1; fi

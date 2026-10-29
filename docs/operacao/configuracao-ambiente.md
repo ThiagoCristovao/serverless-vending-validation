@@ -204,6 +204,25 @@ bloqueio DNS de `ferramentas/injecao-falhas/` (`make injecao-proxy`, `make injec
 use `go run ./cmd/central -impersonar svv-dev-central-simulado@svv-dev.iam.gserviceaccount.com`
 (exige `roles/iam.serviceAccountTokenCreator` na conta).
 
+### 7.2 Testes de carga e cold start (Sprint 10)
+
+```bash
+make carga-preparar OPERADORES=100       # uma vez: 100 contas carga-NNN@exemplo.invalid e máquinas VM-CARGA-NNN (chaves/carga.senha, chaves/carga-lote.json)
+make carga OPERADORES=10 CONFIGURACAO=A  # ~5 min: rampa 30 s, 2 min em regime, 2 min de espera pelas métricas
+make carga OPERADORES=50 CONFIGURACAO=A
+make carga OPERADORES=100 CONFIGURACAO=A
+make infra-dev-apply TF_VAR_funcao_concorrencia=80 TF_VAR_funcao_cpu=1 TF_VAR_funcao_max_instancias=100   # configuração C
+make carga OPERADORES=10 CONFIGURACAO=C  # e 50, 100; depois make infra-dev-apply sem as variáveis para voltar à configuração A
+make carga-frio CONFIGURACAO=min0        # ~2 h: pausa o agendador, 6 amostras após 20 min de inatividade, retoma o agendador
+make infra-dev-apply TF_VAR_funcao_min_instancias=1 && make carga-frio CONFIGURACAO=min1 && make infra-dev-apply
+```
+
+Os relatórios vão para `docs/avaliacao/evidencias/carga-<conf>-<n>.md` e
+`cold-start-<conf>.md`; a consolidação está em `docs/avaliacao/escalabilidade.md`. As variáveis
+`TF_VAR_*` são lidas pelo Terraform e não ficam em arquivo; a configuração padrão volta ao
+aplicar sem elas. Se um `carga-frio` for interrompido, retome o job
+`svv-dev-reconciliar-publicacoes` no Cloud Scheduler.
+
 ## 8. Custos
 
 Os serviços usados têm camada gratuita generosa para o volume deste trabalho. Os pontos de
