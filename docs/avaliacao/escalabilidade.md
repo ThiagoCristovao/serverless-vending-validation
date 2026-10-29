@@ -31,7 +31,30 @@ operadores; cold start pela mediana e pelo máximo das primeiras requisições.
 
 ## 2. Resultados sob carga
 
-*(seções preenchidas com os relatórios de evidências)*
+Execuções de 29/10/2026 contra `svv-dev`; cada uma com rampa de 30 s e 2 min em regime
+([evidências](evidencias/)). "Cliente" é a latência medida pelo gerador, que inclui a ida e
+volta pela internet até `us-east1`; "gateway" e "função" são as métricas do Monitoring na
+janela completa (rampa incluída). Nenhuma requisição falhou em nenhuma execução.
+
+### 2.1 Configuração A (concorrência 1, 1/6 vCPU, máx. 10 instâncias)
+
+| Operadores | Vazão em regime | Cliente p50 / p95 / p99 | Gateway p50 / p95 / p99 | Função p50 / p95 / p99 | Instâncias (máx.) | Partidas (média) | RNF-05 |
+|---|---|---|---|---|---|---|---|
+| 10 ([A-10](evidencias/carga-A-10.md)) | 12,5 req/s | 278 / 379 / 442 ms | 176 / **304** / 504 ms | 136 / 250 / 386 ms | 9 | 6 (249 ms) | ✅ |
+| 50 ([A-50](evidencias/carga-A-50.md)) | 63,5 req/s | 275 / 365 / 418 ms | 157 / **256** / 410 ms | 121 / 190 / 248 ms | 10 | 3 (69 ms) | ✅ |
+| 100 ([A-100](evidencias/carga-A-100.md)) | 78,3 req/s | 624 / 1592 / 1880 ms | 386 / **1834** / 2046 ms | 119 / 188 / 235 ms | 10 | 1 (49 ms) | ❌ |
+
+Leitura. Com 10 e 50 operadores a plataforma alocou instâncias conforme a demanda (9 e 10) e o
+p95 no gateway ficou em 304 e 256 ms. Com 100 operadores a demanda (cerca de 128 req/s, dado o
+ciclo de cada operador) ultrapassou a capacidade do limite de 10 instâncias com uma requisição
+por vez (cerca de 80 req/s com 120 ms por requisição): a vazão saturou em 78 req/s e as
+requisições passaram a esperar por uma instância livre. A função em si continuou rápida (p95
+188 ms, o menor das três execuções): a fila se forma antes dela, no roteamento do Cloud Run, e
+aparece na métrica do gateway (p95 1 834 ms) e no cliente (p95 1 592 ms), não na da função. A
+linha do tempo mostra o p95 saltando de 437 ms para 1 434 ms entre 10 e 30 s da rampa, quando o
+décimo operador deixou de ter instância própria, e estabilizando entre 1,3 e 1,9 s pelo resto da
+janela, sem erros nem tempo esgotado: o limite protege o custo, mas não atende ao RNF-05 com 100
+operadores. A sobrecarga própria do gateway foi de 1 ms no p95 em todas as execuções.
 
 ## 3. Cold start e regime contínuo
 
