@@ -95,11 +95,41 @@ configuração C e nas cargas de 10 e 50 operadores pela configuração A.
 
 ## 4. Síntese por requisito
 
-*(a preencher)*
+| Requisito / cenário | Resultado | Onde |
+|---|---|---|
+| RNF-05 — p95 no gateway ≤ 500 ms com 10, 50 e 100 operadores, com escala automática | **atendido na configuração C** (249, 247 e 452 ms; 1 a 2 instâncias) e **parcialmente na A** (304 e 256 ms com 10 e 50; 1 834 ms com 100 por saturação do limite de 10 instâncias com uma requisição por vez). A escala automática foi observada nas duas (9 a 10 instâncias em A; 1 a 2 em C) | 2.1, 2.2, 2.3 |
+| RNF-06 — regime contínuo: p50 ≤ 200 ms e p95 ≤ 500 ms | **atendido**: função p50 136 ms e p95 250 ms (A-10); p50 115 ms e p95 161 ms (C-10) | 2.1, 2.2 |
+| RNF-06 / CE-18 — cold start ≤ 1,5 s | *(seção 3, a preencher)* | 3 |
+| Estabilidade da latência fim a fim conforme a carga cresce | em C o p95 no cliente foi de 387, 407 e 467 ms para 10, 50 e 100 operadores; em A, 379, 365 e 1 592 ms | 2.1, 2.2 |
+| Nenhuma requisição com erro sob carga | **atendido** em todas as seis execuções (41 295 requisições em regime) | evidências |
 
 ## 5. Observações e limitações
 
-*(a preencher)*
+- **O limite de instâncias é uma decisão de custo com efeito direto na latência.** O p95 de
+  1,8 s em A-100 não é lentidão da função (p95 188 ms), e sim espera por instância livre; o
+  Cloud Run enfileira em vez de rejeitar, por isso não houve erro nem tempo esgotado. Em um
+  ambiente real o limite seria dimensionado pela frota de operadores, e o painel de observabilidade
+  já mostra instâncias e latência para ajustá-lo.
+- **Concorrência por instância muda a economia da escala.** Com 80 requisições por instância e
+  1 vCPU, uma ou duas instâncias atenderam 100 operadores; com uma requisição por instância,
+  foram necessárias dez vezes mais instâncias para menos vazão. Para um serviço em Go que passa a
+  maior parte do tempo esperando o Firestore, a concorrência é o ajuste mais barato.
+- **A medição no cliente inclui a rede.** O gerador rodou em um computador doméstico no Paraná
+  contra `us-east1`: a diferença entre o p50 do cliente (275 a 363 ms) e o do gateway (120 a
+  197 ms) é a ida e volta pela internet, parecida com a de um celular em campo. O critério do
+  RNF-05 usa a métrica do gateway, como o requisito define.
+- **Partidas de instância durante a carga são curtas.** As partidas registradas pelo Monitoring
+  durante as cargas tiveram média de 49 a 444 ms (`startup_latencies` mede o contêiner, não a
+  primeira requisição); a seção 3 mede a primeira requisição fria de ponta a ponta.
+- **Métricas do provedor chegam com atraso.** As do Cloud Run levam 3 a 4 min para ficar
+  disponíveis, as do gateway cerca de 2; a ferramenta espera 4 min antes de consultá-las, e
+  a contagem de requisições da função na janela ainda pode vir incompleta.
+- **Modelo de carga.** Laço fechado com pausa de 1 s: a demanda cresce com o número de
+  operadores (cerca de 1,3 req/s por operador) e a saturação se manifesta como latência, não
+  como erro. Um modelo aberto (taxa fixa) mostraria o ponto de rejeição; fica como extensão.
+- **Reverter a configuração exige valores explícitos.** O provedor mantém CPU e concorrência
+  quando o Terraform omite os atributos; os padrões do ambiente dev passaram a ser explícitos
+  para que aplicar sem variáveis volte à configuração A (ADR-0015).
 
 ## 6. Como reproduzir
 
