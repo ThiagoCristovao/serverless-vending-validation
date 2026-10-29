@@ -56,6 +56,39 @@ décimo operador deixou de ter instância própria, e estabilizando entre 1,3 e 
 janela, sem erros nem tempo esgotado: o limite protege o custo, mas não atende ao RNF-05 com 100
 operadores. A sobrecarga própria do gateway foi de 1 ms no p95 em todas as execuções.
 
+### 2.2 Configuração C (concorrência 80, 1 vCPU, máx. 100 instâncias)
+
+| Operadores | Vazão em regime | Cliente p50 / p95 / p99 | Gateway p50 / p95 / p99 | Função p50 / p95 / p99 | Instâncias (máx. em regime) | Partidas (média) | RNF-05 |
+|---|---|---|---|---|---|---|---|
+| 10 ([C-10](evidencias/carga-C-10.md)) | 11,7 req/s | 353 / 387 / 423 ms | 119 / **249** / 359 ms | 115 / 161 / 245 ms | 2 | 2 (363 ms) | ✅ |
+| 50 ([C-50](evidencias/carga-C-50.md)) | 57,6 req/s | 363 / 407 / 454 ms | 120 / **247** / 260 ms | 117 / 161 / 215 ms | 1 | 0 | ✅ |
+| 100 ([C-100](evidencias/carga-C-100.md)) | 120,6 req/s | 305 / 467 / 543 ms | 197 / **452** / 510 ms | 147 / 317 / 393 ms | 2 | 2 (444 ms) | ✅ |
+
+Leitura. Com concorrência por instância, uma única instância de 1 vCPU atendeu 50 operadores
+(57,6 req/s) e duas atenderam 100 (120,6 req/s, a demanda integral), com p95 no gateway de 247 e
+452 ms. A função ficou mais lenta sob 100 operadores (p95 317 ms contra 161 ms com 50), sinal
+de disputa de CPU dentro da instância antes de a segunda subir, mas dentro do alvo. A linha do
+tempo mostra o p95 no cliente passando de 586 ms entre 30 e 40 s da rampa (uma instância
+saturando) para a faixa de 440–510 ms depois que a segunda instância entrou. As 9 instâncias do
+primeiro minuto da C-10 são da revisão anterior, ainda sendo trocada. Em regime, C usou de 1 a 2
+instâncias onde A usou 9 a 10.
+
+### 2.3 Comparação
+
+| Operadores | p95 no gateway, A | p95 no gateway, C | Vazão A | Vazão C | Instâncias A | Instâncias C |
+|---|---|---|---|---|---|---|
+| 10 | 304 ms | 249 ms | 12,5 req/s | 11,7 req/s | 9 | 2 |
+| 50 | 256 ms | 247 ms | 63,5 req/s | 57,6 req/s | 10 | 1 |
+| 100 | 1 834 ms | 452 ms | 78,3 req/s (saturada) | 120,6 req/s | 10 | 2 |
+
+A escala automática funcionou nas duas configurações: em A a plataforma subiu instâncias até o
+limite de 10; em C, uma ou duas instâncias bastaram. A diferença com 100 operadores não vem da
+função (p95 de 188 ms em A e 317 ms em C), mas do limite de instâncias combinado com uma
+requisição por instância: em A as requisições esperam por uma instância livre e a espera aparece
+no gateway e no cliente. Elevar o limite de A para 100 instâncias também atenderia ao RNF-05,
+com dez vezes mais instâncias (e partidas) do que C. O RNF-05 é atendido em todas as cargas pela
+configuração C e nas cargas de 10 e 50 operadores pela configuração A.
+
 ## 3. Cold start e regime contínuo
 
 *(a preencher)*

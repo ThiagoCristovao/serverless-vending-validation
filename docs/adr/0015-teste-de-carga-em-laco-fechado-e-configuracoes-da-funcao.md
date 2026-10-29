@@ -33,9 +33,10 @@ todo e torna o cold start raro em uso normal.
    usa a métrica da função com 10 operadores.
 3. **Configurações comparadas.** A (atual: concorrência 1, 1/6 vCPU, máx. 10 instâncias) e C
    (concorrência 80, 1 vCPU, máx. 100 instâncias), cada uma com 10, 50 e 100 operadores. C
-   explora a concorrência por instância que um serviço em Go sustenta; a variável de ambiente do
-   Terraform volta ao padrão após os testes. As três variáveis novas (`funcao_concorrencia`,
-   `funcao_cpu`, `funcao_max_instancias`) ficam com valores nulos/atuais por padrão.
+   explora a concorrência por instância que um serviço em Go sustenta. As três variáveis novas do
+   ambiente dev (`funcao_concorrencia`, `funcao_cpu`, `funcao_max_instancias`) têm como padrão
+   os valores da configuração A, explícitos: como o provedor mantém o valor atual quando o
+   atributo é omitido, só um padrão explícito garante que aplicar sem `-var` reverta.
 4. **Cold start por inatividade real.** O cenário `frio` pausa o job de reconciliação, espera
    20 min de inatividade, faz uma validação (primeira requisição fria, conclusão quente) e repete
    seis vezes; depois retoma o job. É executado com `min_instancias` 0 e 1 (CE-18), lendo também

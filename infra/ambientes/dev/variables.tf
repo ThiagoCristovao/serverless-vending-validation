@@ -34,14 +34,14 @@ variable "funcao_max_instancias" {
 
 variable "funcao_concorrencia" {
   type        = number
-  description = "Requisições simultâneas por instância da função. Nulo mantém o padrão (1); comparado com 80 nos testes de carga (Sprint 10)."
-  default     = null
+  description = "Requisições simultâneas por instância da função (configuração A = 1; comparada com 80 nos testes de carga da Sprint 10). Explícito para que aplicar sem -var reverta."
+  default     = 1
 }
 
 variable "funcao_cpu" {
   type        = string
-  description = "vCPU por instância da função. Nulo mantém o padrão (1/6); \"1\" quando a concorrência é maior que 1."
-  default     = null
+  description = "vCPU por instância da função (configuração A = \"0.1666\", o padrão da plataforma para 256Mi; \"1\" quando a concorrência é maior que 1)."
+  default     = "0.1666"
 }
 
 variable "gateway_caminho_base_backend" {
