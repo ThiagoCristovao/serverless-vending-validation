@@ -219,6 +219,10 @@ func TestIdentidade(t *testing.T) {
 	if ilegivel.status != http.StatusOK {
 		t.Fatalf("/saude não exige identidade: %d", ilegivel.status)
 	}
+	publica := b.chamar(http.MethodGet, "/v1/saude", nil, nil)
+	if publica.status != http.StatusOK || publica.corpo["status"] != "ok" {
+		t.Fatalf("/v1/saude (aquecimento pelo gateway) deve responder 200 {status: ok}: %d %v", publica.status, publica.corpo)
+	}
 }
 
 func TestReconciliacaoPeloEndpointInterno(t *testing.T) {

@@ -98,4 +98,5 @@ module "gateway" {
   url_funcao           = module.funcao.url
   contrato_caminho     = "${path.root}/../../../api/openapi.yaml"
   caminho_base_backend = var.gateway_caminho_base_backend
+  aquecimento_cron     = var.gateway_aquecimento_cron
 }

@@ -44,6 +44,9 @@ func NovoManipulador(s *aplicacao.Servico, o Opcoes) http.Handler {
 	m := &manipulador{s: s, o: o}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /saude", m.saude)
+	// /v1/saude é a mesma verificação exposta pelo gateway, sem autenticação,
+	// para o job de aquecimento (ADR-0017).
+	mux.HandleFunc("GET /v1/saude", m.saude)
 	mux.HandleFunc("POST /v1/validacoes", m.iniciar)
 	mux.HandleFunc("GET /v1/validacoes/{idValidacao}", m.consultar)
 	mux.HandleFunc("POST /v1/validacoes/{idValidacao}/conclusao", m.concluir)
