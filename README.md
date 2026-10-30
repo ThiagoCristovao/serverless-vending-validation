@@ -43,8 +43,12 @@ físico), **7** (aplicativo integrado ao serviço: contrassenha, leituras, concl
 erro, verificado em dispositivo físico contra `svv-dev`) e **8** (sistema central simulado e suíte
 de ponta a ponta executada contra `svv-dev`: fluxo principal, duplicatas e DLQ) e **9** (avaliação
 de resiliência e independência: cenários de falha do lado do serviço e do dispositivo executados,
-com evidências em [docs/avaliacao/resiliencia.md](docs/avaliacao/resiliencia.md)). A **10**
-(escalabilidade e consolidação) é a próxima. O planejamento completo está em
+com evidências em [docs/avaliacao/resiliencia.md](docs/avaliacao/resiliencia.md)) e **10**
+(escalabilidade e consolidação: cargas com 10, 50 e 100 operadores em duas configurações da
+função, cold start após inatividade e análise comparativa, com evidências em
+[docs/avaliacao/escalabilidade.md](docs/avaliacao/escalabilidade.md) e
+[docs/avaliacao/analise-comparativa.md](docs/avaliacao/analise-comparativa.md)). O
+planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).
 
@@ -66,7 +70,7 @@ docs/
   modelo-dados.md          coleções do Firestore e esquema dos eventos — Sprint 1
   arquitetura.md           componentes, fluxos, exceções, segurança — Sprint 2
   diagramas/               fontes Mermaid dos diagramas
-  avaliacao/               relatório de resiliência e independência com evidências — Sprint 9
+  avaliacao/               relatórios de resiliência (Sprint 9), escalabilidade e análise comparativa (Sprint 10), com evidências
   adr/                     registros de decisão de arquitetura
   operacao/                configuração do ambiente e convenções
   referencias/             proposta do TCC 1 (PDF)
