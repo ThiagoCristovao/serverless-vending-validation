@@ -68,7 +68,7 @@ func linhasResultados(rs []resultado) [][]string {
 		if erro == "" {
 			erro = "—"
 		}
-		linhas = append(linhas, []string{strconv.Itoa(i + 1), r.Maquina, r.Id, strconv.Itoa(r.StatusAbertura), dur(r.DurAbertura), strconv.Itoa(r.StatusConclusao), dur(r.DurConclusao), erro})
+		linhas = append(linhas, []string{strconv.Itoa(i + 1), r.Maquina, r.Id, strconv.Itoa(r.StatusAbertura), laboratorio.Dur(r.DurAbertura), strconv.Itoa(r.StatusConclusao), laboratorio.Dur(r.DurConclusao), erro})
 	}
 	return linhas
 }
@@ -99,10 +99,10 @@ func (x *experimento) eventosConsumidos(rs []resultado) (total int, emOrdem bool
 	return total, emOrdem
 }
 
-func linhasAmostras(as []Amostra) [][]string {
+func linhasAmostras(as []laboratorio.Amostra) [][]string {
 	var linhas [][]string
 	for _, a := range as {
-		linhas = append(linhas, []string{hora(a.Quando), strconv.FormatFloat(a.Valor, 'f', 0, 64)})
+		linhas = append(linhas, []string{laboratorio.HoraDe(a.Quando), strconv.FormatFloat(a.Valor, 'f', 0, 64)})
 	}
 	return linhas
 }
@@ -142,7 +142,7 @@ func (x *experimento) centralIndisponivel(ctx context.Context) error {
 		}
 		if as, err := x.nuvem.Backlog(ctx, x.cfg.Assinatura(), inicioFalha.Add(-2*time.Minute)); err == nil && len(as) > 0 {
 			ultima := as[len(as)-1]
-			rel.Evento("backlog (num_undelivered_messages) = %.0f em %s", ultima.Valor, hora(ultima.Quando))
+			rel.Evento("backlog (num_undelivered_messages) = %.0f em %s", ultima.Valor, laboratorio.HoraDe(ultima.Quando))
 		}
 	}
 
@@ -151,14 +151,14 @@ func (x *experimento) centralIndisponivel(ctx context.Context) error {
 		return err
 	}
 	fimFalha := time.Now()
-	rel.Evento("sistema central RETOMADO após %s", dur(fimFalha.Sub(inicioFalha)))
+	rel.Evento("sistema central RETOMADO após %s", laboratorio.Dur(fimFalha.Sub(inicioFalha)))
 	esperados := 2 * contarOk(rs)
 	levou, ok := laboratorio.Esperar(ctx, x.prazoRecuperacao, time.Second, func() bool {
 		total, _ := x.eventosConsumidos(rs)
 		return total >= esperados
 	})
 	total, emOrdem := x.eventosConsumidos(rs)
-	rel.Evento("%d de %d eventos das validações da falha consumidos %s após a retomada", total, esperados, dur(levou))
+	rel.Evento("%d de %d eventos das validações da falha consumidos %s após a retomada", total, esperados, laboratorio.Dur(levou))
 	depois := x.central.Processador.Estatisticas()
 
 	// Evidências do provedor (as métricas do Pub/Sub têm granularidade de ~1 min).
@@ -178,7 +178,7 @@ func (x *experimento) centralIndisponivel(ctx context.Context) error {
 	}
 
 	rel.Verificar(contarOk(rs) == len(rs), "RNF-03: %d/%d validações completas (201/200) com o sistema central indisponível", contarOk(rs), len(rs))
-	rel.Verificar(ok && total == esperados, "RNF-01: %d/%d eventos consumidos após o restabelecimento, sem intervenção manual, em %s", total, esperados, dur(levou))
+	rel.Verificar(ok && total == esperados, "RNF-01: %d/%d eventos consumidos após o restabelecimento, sem intervenção manual, em %s", total, esperados, laboratorio.Dur(levou))
 	rel.Verificar(emOrdem, "ordem por máquina preservada (iniciada antes de concluida em cada validação)")
 	rel.Verificar(depois.Duplicadas == antes.Duplicadas && depois.Rejeitadas == antes.Rejeitadas, "nenhuma duplicata ou rejeição durante a recuperação (duplicadas=%d, rejeitadas=%d)", depois.Duplicadas-antes.Duplicadas, depois.Rejeitadas-antes.Rejeitadas)
 	return nil
@@ -231,7 +231,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 		}
 		if m.IniciadaEm == nil {
 			ativaEm = time.Now()
-			rel.Evento("falha ATIVA: validação %s ficou com eventos.iniciadaPublicadaEm nulo (%s após a remoção)", r.Id, dur(ativaEm.Sub(inicioFalha)))
+			rel.Evento("falha ATIVA: validação %s ficou com eventos.iniciadaPublicadaEm nulo (%s após a remoção)", r.Id, laboratorio.Dur(ativaEm.Sub(inicioFalha)))
 		} else {
 			rel.Evento("sonda %s publicada normalmente (IAM ainda propagando)", r.Id)
 			time.Sleep(10 * time.Second)
@@ -259,7 +259,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 		}
 		linhasMarc = append(linhasMarc, []string{r.Id, m.Status, marcador(m.IniciadaEm), marcador(m.ConcluidaEm)})
 	}
-	rel.Tabela("Marcadores de publicação no Firestore durante a falha", []string{"idValidacao", "status", "iniciadaPublicadaEm", "concluidaPublicadaEm"}, linhasMarc)
+	rel.Tabela("laboratorio.Marcadores de publicação no Firestore durante a falha", []string{"idValidacao", "status", "iniciadaPublicadaEm", "concluidaPublicadaEm"}, linhasMarc)
 	rel.Evento("%d de %d publicações pendentes (marcador nulo)", pendentes, 2*len(rs))
 
 	// Recuperação: restaura o vínculo e espera a reconciliação do Scheduler.
@@ -267,7 +267,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 		return err
 	}
 	restaurado = true
-	rel.Evento("vínculo pubsub.publisher RESTAURADO após %s de falha; aguardando a reconciliação (Cloud Scheduler a cada 5 min, pendências com mais de 2 min)", dur(time.Since(inicioFalha)))
+	rel.Evento("vínculo pubsub.publisher RESTAURADO após %s de falha; aguardando a reconciliação (Cloud Scheduler a cada 5 min, pendências com mais de 2 min)", laboratorio.Dur(time.Since(inicioFalha)))
 	todas := append(slices.Clone(sondas), rs...)
 	esperados := 2 * contarOk(todas)
 	levou, ok := laboratorio.Esperar(ctx, x.prazoRecuperacao, 5*time.Second, func() bool {
@@ -275,7 +275,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 		return total >= esperados
 	})
 	total, emOrdem := x.eventosConsumidos(todas)
-	rel.Evento("%d de %d eventos consumidos %s após restaurar", total, esperados, dur(levou))
+	rel.Evento("%d de %d eventos consumidos %s após restaurar", total, esperados, laboratorio.Dur(levou))
 
 	linhasMarc = nil
 	publicadas := 0
@@ -292,7 +292,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 		}
 		linhasMarc = append(linhasMarc, []string{r.Id, m.Status, marcador(m.IniciadaEm), marcador(m.ConcluidaEm)})
 	}
-	rel.Tabela("Marcadores de publicação no Firestore após a reconciliação", []string{"idValidacao", "status", "iniciadaPublicadaEm", "concluidaPublicadaEm"}, linhasMarc)
+	rel.Tabela("laboratorio.Marcadores de publicação no Firestore após a reconciliação", []string{"idValidacao", "status", "iniciadaPublicadaEm", "concluidaPublicadaEm"}, linhasMarc)
 
 	// Logs da função: pendências e reconciliação.
 	if entradas, err := x.nuvem.EntradasDaFuncao(ctx, x.cfg.NomeFuncao(), inicioFalha, `("publicação pendente" OR "reconciliação" OR "reconciliar")`); err == nil {
@@ -305,7 +305,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 			if mensagem == "" {
 				continue
 			}
-			linhas = append(linhas, []string{hora(e.Quando), e.Severidade, mensagem, e.Rota(), e.Campo("idValidacao"), e.Campo("status")})
+			linhas = append(linhas, []string{laboratorio.HoraDe(e.Quando), e.Severidade, mensagem, e.Rota(), e.Campo("idValidacao"), e.Campo("status")})
 		}
 		rel.Tabela("Logs da função (Cloud Logging): publicações pendentes e chamadas de reconciliação", []string{"Instante", "Severidade", "Mensagem", "Rota", "idValidacao", "Status"}, linhas)
 	} else {
@@ -314,7 +314,7 @@ func (x *experimento) publicacaoIndisponivel(ctx context.Context) error {
 
 	rel.Verificar(contarOk(rs) == len(rs), "RNF-04: %d/%d validações completas (201/200) com a publicação indisponível", contarOk(rs), len(rs))
 	rel.Verificar(pendentes == 2*len(rs), "CE-14: %d/%d publicações ficaram pendentes (marcador nulo) sem afetar a resposta ao operador", pendentes, 2*len(rs))
-	rel.Verificar(ok && total == esperados && publicadas == 2*len(rs), "ADR-0012: reconciliação republicou e o consumidor recebeu %d/%d eventos em %s após restaurar (%d marcadores gravados)", total, esperados, dur(levou), publicadas)
+	rel.Verificar(ok && total == esperados && publicadas == 2*len(rs), "ADR-0012: reconciliação republicou e o consumidor recebeu %d/%d eventos em %s após restaurar (%d marcadores gravados)", total, esperados, laboratorio.Dur(levou), publicadas)
 	rel.Verificar(emOrdem, "ordem por máquina preservada após a reconciliação")
 	return nil
 }
@@ -323,7 +323,7 @@ func marcador(t *time.Time) string {
 	if t == nil {
 		return "**null**"
 	}
-	return hora(*t)
+	return laboratorio.HoraDe(*t)
 }
 
 // --- Cenário C: Firestore indisponível ------------------------------------------
@@ -361,7 +361,7 @@ func (x *experimento) firestoreIndisponivel(ctx context.Context) error {
 		switch {
 		case resp.Status == http.StatusServiceUnavailable && resp.Texto("codigo") == "dependencia_indisponivel":
 			ativaEm = time.Now()
-			rel.Evento("falha ATIVA: 503 dependencia_indisponivel (%s após a remoção)", dur(ativaEm.Sub(inicioFalha)))
+			rel.Evento("falha ATIVA: 503 dependencia_indisponivel (%s após a remoção)", laboratorio.Dur(ativaEm.Sub(inicioFalha)))
 		case resp.Status == http.StatusCreated:
 			rel.Evento("sonda %s aberta normalmente (IAM ainda propagando); concluindo", resp.Texto("idValidacao"))
 			if _, err := x.gateway.ConcluirValidacao(ctx, resp.Texto("idValidacao")); err != nil {
@@ -392,7 +392,7 @@ func (x *experimento) firestoreIndisponivel(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			statusTentativas = append(statusTentativas, fmt.Sprintf("%d (%s)", resp.Status, dur(resp.Duracao)))
+			statusTentativas = append(statusTentativas, fmt.Sprintf("%d (%s)", resp.Status, laboratorio.Dur(resp.Duracao)))
 			if resp.Status == http.StatusServiceUnavailable && resp.Texto("codigo") == "dependencia_indisponivel" {
 				codigos503++
 			} else {
@@ -426,7 +426,7 @@ func (x *experimento) firestoreIndisponivel(ctx context.Context) error {
 		if resp.Status == http.StatusCreated {
 			recuperadaEm = time.Now()
 			idRecuperada = resp.Texto("idValidacao")
-			rel.Evento("serviço RECUPERADO: 201 com a chave da 1ª requisição falha, validação %s (%s após restaurar)", idRecuperada, dur(recuperadaEm.Sub(fimFalha)))
+			rel.Evento("serviço RECUPERADO: 201 com a chave da 1ª requisição falha, validação %s (%s após restaurar)", idRecuperada, laboratorio.Dur(recuperadaEm.Sub(fimFalha)))
 		} else {
 			rel.Evento("ainda %d; nova sonda em 10 s", resp.Status)
 			time.Sleep(10 * time.Second)
@@ -441,15 +441,15 @@ func (x *experimento) firestoreIndisponivel(ctx context.Context) error {
 	levou, consumida := laboratorio.Esperar(ctx, 2*time.Minute, time.Second, func() bool {
 		return len(x.central.Registro.Listar(armazenamento.Filtro{IdValidacao: idRecuperada})) == 2
 	})
-	rel.Evento("validação pós-recuperação consumida pelo sistema central: %v (%s)", consumida, dur(levou))
+	rel.Evento("validação pós-recuperação consumida pelo sistema central: %v (%s)", consumida, laboratorio.Dur(levou))
 
 	if entradas, err := x.nuvem.EntradasDaFuncao(ctx, x.cfg.NomeFuncao(), inicioFalha, `jsonPayload.codigo="dependencia_indisponivel"`); err == nil {
-		rel.Secao("Logs da função (Cloud Logging)", fmt.Sprintf("%d entradas com `codigo = dependencia_indisponivel` entre %s e %s (métrica derivada de log `%s-erros-por-codigo`).", len(entradas), hora(inicioFalha), hora(time.Now()), x.cfg.Prefixo))
+		rel.Secao("Logs da função (Cloud Logging)", fmt.Sprintf("%d entradas com `codigo = dependencia_indisponivel` entre %s e %s (métrica derivada de log `%s-erros-por-codigo`).", len(entradas), laboratorio.HoraDe(inicioFalha), laboratorio.HoraDe(time.Now()), x.cfg.Prefixo))
 	}
 
 	rel.Verificar(codigos503 == x.validacoes*(len(esperas)+1) && outros == 0, "CE-13: todas as %d tentativas receberam 503 dependencia_indisponivel (falha rápida, sem estado parcial)", codigos503)
 	rel.Verificar(true, "RF-23: após os 3 reenvios, o aplicativo exibiria \"Serviço indisponível\" ao operador (fluxo coberto por teste de widget)")
-	rel.Verificar(idRecuperada != "", "recuperação sem intervenção: a chave de uma requisição falha foi reutilizada e criou a validação (%s após restaurar)", dur(recuperadaEm.Sub(fimFalha)))
+	rel.Verificar(idRecuperada != "", "recuperação sem intervenção: a chave de uma requisição falha foi reutilizada e criou a validação (%s após restaurar)", laboratorio.Dur(recuperadaEm.Sub(fimFalha)))
 	rel.Verificar(consumida, "fluxo completo após a recuperação, inclusive o consumo pelo sistema central")
 	return nil
 }

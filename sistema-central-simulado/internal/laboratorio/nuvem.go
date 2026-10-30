@@ -1,4 +1,4 @@
-package main
+package laboratorio
 
 import (
 	"context"
@@ -83,8 +83,12 @@ func (n *Nuvem) Metrica(ctx context.Context, tipo, assinatura string, desde time
 			amostras = append(amostras, Amostra{Quando: quando, Valor: v})
 		}
 	}
-	slices.SortFunc(amostras, func(a, b Amostra) int { return a.Quando.Compare(b.Quando) })
+	ordenar(amostras)
 	return amostras, nil
+}
+
+func ordenar(amostras []Amostra) {
+	slices.SortFunc(amostras, func(a, b Amostra) int { return a.Quando.Compare(b.Quando) })
 }
 
 // Backlog lê num_undelivered_messages da assinatura.
@@ -102,8 +106,13 @@ type EntradaLog struct {
 	Quando     time.Time
 	Severidade string
 	Mensagem   string
-	// Requisicao resume o httpRequest do log de acesso do Cloud Run, se houver.
+	// Requisicao resume o httpRequest do log de acesso do Cloud Run, se houver;
+	// Metodo, Caminho, Status e Latencia trazem os mesmos dados em campos.
 	Requisicao string
+	Metodo     string
+	Caminho    string
+	Status     int
+	Latencia   time.Duration
 	Campos     map[string]any
 }
 
@@ -129,6 +138,18 @@ func (e EntradaLog) Rota() string {
 // instante que contenham o texto (busca livre do Logging).
 func (n *Nuvem) EntradasDaFuncao(ctx context.Context, nomeFuncao string, desde time.Time, texto string) ([]EntradaLog, error) {
 	filtro := fmt.Sprintf(`resource.type="cloud_run_revision" AND resource.labels.service_name="%s" AND timestamp>="%s"`, nomeFuncao, desde.UTC().Format(time.RFC3339))
+	return n.entradas(ctx, filtro, texto)
+}
+
+// EntradasDoGateway lista o log de acesso do API Gateway (endpoints_log) desde
+// um instante; a latência de cada entrada é a medida pelo próprio gateway e o
+// campo service_agent identifica o agente que atendeu (ESPv2 ou outro).
+func (n *Nuvem) EntradasDoGateway(ctx context.Context, desde time.Time, texto string) ([]EntradaLog, error) {
+	filtro := fmt.Sprintf(`resource.type="api" AND timestamp>="%s"`, desde.UTC().Format(time.RFC3339))
+	return n.entradas(ctx, filtro, texto)
+}
+
+func (n *Nuvem) entradas(ctx context.Context, filtro, texto string) ([]EntradaLog, error) {
 	if texto != "" {
 		filtro += fmt.Sprintf(` AND %s`, texto)
 	}
@@ -147,6 +168,8 @@ func (n *Nuvem) EntradasDaFuncao(ctx context.Context, nomeFuncao string, desde t
 		entrada := EntradaLog{Quando: quando, Severidade: e.Severity, Mensagem: e.TextPayload}
 		if r := e.HttpRequest; r != nil {
 			entrada.Requisicao = fmt.Sprintf("%s %s → %d em %s", r.RequestMethod, caminhoDe(r.RequestUrl), r.Status, r.Latency)
+			entrada.Metodo, entrada.Caminho, entrada.Status = r.RequestMethod, caminhoDe(r.RequestUrl), int(r.Status)
+			entrada.Latencia, _ = time.ParseDuration(r.Latency)
 		}
 		if len(e.JsonPayload) > 0 {
 			_ = json.Unmarshal(e.JsonPayload, &entrada.Campos)

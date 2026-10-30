@@ -73,6 +73,18 @@ variable "max_instancias" {
   default     = 10
 }
 
+variable "concorrencia" {
+  type        = number
+  description = "Requisições simultâneas por instância. Nulo mantém o padrão da plataforma (1). Valores maiores exigem pelo menos 1 vCPU (Sprint 10, RNF-05)."
+  default     = null
+}
+
+variable "cpu" {
+  type        = string
+  description = "vCPU por instância (ex.: \"1\"). Nulo mantém o padrão da plataforma (1/6 de vCPU para 256Mi)."
+  default     = null
+}
+
 variable "min_instancias" {
   type        = number
   description = "Instâncias mínimas. Zero em uso normal; 1 apenas durante a medição de cold start (Sprint 10)."

@@ -10,9 +10,9 @@ Fontes dos diagramas em [diagramas/](diagramas/). Decisões em [adr/](adr/).
 
 | Atributo (objetivo geral) | Como a arquitetura o sustenta | Onde é avaliado |
 |---|---|---|
-| **Resiliência operacional** | Persistência antes da publicação; mensagens retidas no Pub/Sub com retentativa e DLQ; idempotência de ponta a ponta; retentativa no dispositivo | Sprint 9 |
-| **Escalabilidade** | Função serverless com escala automática e concorrência por instância; Firestore e Pub/Sub gerenciados; nenhum estado em memória | Sprint 10 |
-| **Independência do sistema central** | O sistema central só recebe eventos assíncronos; nenhuma chamada síncrona a ele no caminho do operador | Sprint 9 |
+| **Resiliência operacional** | Persistência antes da publicação; mensagens retidas no Pub/Sub com retentativa e DLQ; idempotência de ponta a ponta; retentativa no dispositivo | Sprint 9: [avaliacao/resiliencia.md](avaliacao/resiliencia.md) |
+| **Escalabilidade** | Função serverless com escala automática e concorrência por instância; Firestore e Pub/Sub gerenciados; nenhum estado em memória | Sprint 10: [avaliacao/escalabilidade.md](avaliacao/escalabilidade.md) |
+| **Independência do sistema central** | O sistema central só recebe eventos assíncronos; nenhuma chamada síncrona a ele no caminho do operador | Sprint 9: [avaliacao/resiliencia.md](avaliacao/resiliencia.md); comparação qualitativa em [avaliacao/analise-comparativa.md](avaliacao/analise-comparativa.md) |
 
 ## 2. Componentes
 
@@ -188,7 +188,7 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
 | CE-15 | Sistema central indisponível | Pub/Sub | Mensagens retidas; retentativa com espera; ao voltar, consumo em ordem por máquina, sem perda | Nenhum | Sprint 9 |
 | CE-16 | Mensagem falha repetidamente no consumidor | Pub/Sub | Após 5 tentativas vai à DLQ; alerta; as demais mensagens seguem | Nenhum | Sprint 8 |
 | CE-17 | Mensagem duplicada (at-least-once) | Consumidor | Reconhecida por `(idValidacao, tipo)` e ignorada | Nenhum | Sprint 8 |
-| CE-18 | Cold start da função | Função | Latência adicional dentro do alvo (RNF-06); Go reduz; `min_instance_count = 1` avaliado como alternativa | Indicador de progresso | Sprint 10 |
+| CE-18 | Cold start (gateway e função) | Gateway, Função | Medido na Sprint 10: 6 s na primeira requisição após 20 min de inatividade, dos quais 3 a 4,6 s na partida do API Gateway; `min_instance_count = 1` não resolve; alvo revisado e mitigação adiada no [ADR-0016](adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md) ([avaliacao/escalabilidade.md](avaliacao/escalabilidade.md), seção 3) | Indicador de progresso | Sprint 10 |
 | CE-19 | Permissão de câmera negada | App | Tela explicativa com atalho para as configurações do sistema | "Precisamos da câmera para ler o código" | Sprint 6 |
 | CE-20 | Operador conclui sem programar o novo código (`codigoRotacionado = false`) | Função | Contador não incrementa; próxima validação devolve os mesmos códigos; evento registra o fato | Aviso de que o código atual continua valendo | Sprint 4 |
 | CE-21 | Medidor informado menor que o da última validação | Função | Aceita a conclusão e registra o aviso `medidor_menor_que_anterior` na resposta e no evento (RN-07, ADR-0011) | Aviso visível na tela de conclusão | Sprint 4 |
@@ -232,7 +232,7 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0014](adr/0014-injecao-de-falhas-por-iam-proxy-e-dns.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0016](adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:

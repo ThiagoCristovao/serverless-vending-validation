@@ -24,6 +24,7 @@ import (
 // do Terraform e de chaves/). As variáveis têm o prefixo SVV_E2E_.
 type Configuracao struct {
 	Projeto       string
+	Regiao        string // região da função e do agendador (ADR-0003)
 	Gateway       string // base com /v1, ex.: https://host/v1
 	Prefixo       string // svv-dev → svv-dev-validacoes, svv-dev-sistema-central, ...
 	ApiKey        string
@@ -66,6 +67,7 @@ func valorOu(nome, padrao string) string {
 func CarregarConfiguracao() (Configuracao, error) {
 	c := Configuracao{
 		Projeto:       os.Getenv("SVV_E2E_PROJETO"),
+		Regiao:        valorOu("SVV_E2E_REGIAO", "us-east1"),
 		Gateway:       strings.TrimSuffix(os.Getenv("SVV_E2E_GATEWAY"), "/"),
 		Prefixo:       valorOu("SVV_E2E_PREFIXO", "svv-dev"),
 		ApiKey:        os.Getenv("SVV_E2E_API_KEY_WEB"),
@@ -147,30 +149,9 @@ type Operador struct {
 	Email string
 }
 
-// EntrarComoOperador obtém um ID token pela API REST do Identity Toolkit.
+// EntrarComoOperador obtém um ID token do operador de testes da configuração.
 func EntrarComoOperador(ctx context.Context, cfg Configuracao) (Operador, error) {
-	corpo, _ := json.Marshal(map[string]any{"email": cfg.OperadorEmail, "password": cfg.OperadorSenha, "returnSecureToken": true})
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key="+cfg.ApiKey, bytes.NewReader(corpo))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return Operador{}, err
-	}
-	defer resp.Body.Close()
-	var dados struct {
-		IdToken string `json:"idToken"`
-		LocalId string `json:"localId"`
-		Error   struct {
-			Message string `json:"message"`
-		} `json:"error"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&dados); err != nil {
-		return Operador{}, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Operador{}, fmt.Errorf("identitytoolkit %d: %s", resp.StatusCode, dados.Error.Message)
-	}
-	return Operador{Token: dados.IdToken, Uid: dados.LocalId, Email: cfg.OperadorEmail}, nil
+	return Entrar(ctx, cfg.ApiKey, cfg.OperadorEmail, cfg.OperadorSenha)
 }
 
 // --- adesivos --------------------------------------------------------------------

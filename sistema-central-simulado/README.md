@@ -9,6 +9,7 @@ Sustenta a suíte de ponta a ponta da Sprint 8 e os cenários de resiliência da
 |---|---|---|
 | 8 | **concluída** (suíte e2e executada contra `svv-dev` em 26/10/2026) | consumidor idempotente com registro em JSON Lines, interruptor de falhas, API administrativa, testes com Pub/Sub falso em processo e suíte e2e (fluxo principal, duplicatas, DLQ) |
 | 9 | **concluída** (experimentos executados contra `svv-dev` em 27/10/2026) | `cmd/experimento`: cenários de injeção de falhas no lado do serviço (sistema central, Pub/Sub e Firestore indisponíveis) com relatório de evidências; pacote `laboratorio` compartilhado com a e2e |
+| 10 | **em andamento** | `cmd/carga`: operadores virtuais em laço fechado (10, 50 e 100) contra o gateway, comparação de configurações da função e cold start após inatividade, com relatório de evidências (ADR-0015) |
 
 ## Comportamento
 
@@ -40,6 +41,7 @@ Sustenta a suíte de ponta a ponta da Sprint 8 e os cenários de resiliência da
 ```
 cmd/central/main.go              flags/variáveis SVV_CENTRAL_*: projeto, assinatura, arquivo, porta, impersonar
 cmd/experimento/                 Sprint 9: cenários de injeção de falhas e relatório Markdown (make experimento)
+cmd/carga/                       Sprint 10: preparação de operadores virtuais, teste de carga e cold start (make carga-preparar, carga, carga-frio)
 internal/
 ├── eventos/                     contrato dos eventos (decodificação e validação; campos extras tolerados)
 ├── armazenamento/               registro JSON Lines + índice por (idValidacao, tipo)
@@ -58,6 +60,9 @@ make central-executar      # consome svv-dev-sistema-central; API em :8090
 make e2e-preparar          # uma vez: semeia VM-E2E1 e VM-E2E2 no Firestore de dev
 make e2e                   # suíte e2e contra svv-dev (~5 min); E2E_ARGS=-short pula o cenário de DLQ
 make experimento CENARIO=central-indisponivel   # Sprint 9; também publicacao-indisponivel, firestore-indisponivel, restaurar
+make carga-preparar OPERADORES=100              # Sprint 10, uma vez: contas e máquinas de carga
+make carga OPERADORES=50 CONFIGURACAO=A         # teste de carga (relatório em docs/avaliacao/evidencias)
+make carga-frio CONFIGURACAO=min0               # cold start após inatividade (~2 h)
 ```
 
 Variáveis do comando (`SVV_CENTRAL_PROJETO`, `SVV_CENTRAL_ASSINATURA`, `SVV_CENTRAL_ARQUIVO`,

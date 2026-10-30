@@ -1,4 +1,4 @@
-package main
+package laboratorio
 
 import (
 	"fmt"
@@ -101,9 +101,9 @@ func (r *Relatorio) Markdown() string {
 	return b.String()
 }
 
-func dur(d time.Duration) string { return d.Round(time.Millisecond).String() }
+func Dur(d time.Duration) string { return d.Round(time.Millisecond).String() }
 
-func hora(t time.Time) string {
+func HoraDe(t time.Time) string {
 	if t.IsZero() {
 		return "—"
 	}

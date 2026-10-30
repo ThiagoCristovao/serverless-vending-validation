@@ -81,6 +81,9 @@ module "funcao" {
   topico_validacoes     = module.pubsub.topico_validacoes_nome
   segredo_hmac_nome     = module.iam.segredo_hmac_nome
   min_instancias        = var.funcao_min_instancias
+  max_instancias        = var.funcao_max_instancias
+  concorrencia          = var.funcao_concorrencia
+  cpu                   = var.funcao_cpu
 
   depends_on = [module.firestore, module.pubsub]
 }
