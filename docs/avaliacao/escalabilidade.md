@@ -184,12 +184,15 @@ conexões ativas.
 Em uso normal o job do Scheduler mantém a função aquecida (uma instância sempre alocada nas 24 h
 observadas no Monitoring), mas não o gateway, porque chama a função diretamente: a primeira
 validação de um operador depois de um intervalo sem uso da frota pagaria a partida do gateway, e
-o aplicativo a cobre com o indicador de progresso (CE-18). Três caminhos de mitigação ficam para
-decisão de operação, a registrar em ADR próprio: tráfego periódico que atravesse o gateway (o
-próprio job do Scheduler chamando uma rota leve pela URL pública, custo desprezível), chamada
-direta do aplicativo ao serviço Cloud Run com validação do token na função (dispensa a partida do
-gateway e o contrato OpenAPI imposto por ele) ou revisão do alvo do RNF-06 para a primeira
-requisição após inatividade, mantendo o alvo de regime.
+o aplicativo a cobre com o indicador de progresso (CE-18). O
+[ADR-0016](../adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md) registra o resultado,
+revisa o critério de aceitação do cold start para ≤ 10 s de ponta a ponta, sem retentativa e com
+indicador de progresso (metade do tempo limite de resposta do aplicativo; atendido, máximo
+8,0 s), mantém 1,5 s como meta e adia a mitigação, na ordem: tráfego periódico que atravesse o
+gateway (o próprio job do Scheduler chamando uma rota leve pela URL pública, custo desprezível),
+que manteria quentes o gateway e as conexões da função; ou chamada direta do aplicativo ao serviço
+Cloud Run com validação do token na função, que dispensa a partida do gateway ao custo do contrato
+OpenAPI imposto por ele.
 
 ## 4. Síntese por requisito
 
@@ -197,7 +200,7 @@ requisição após inatividade, mantendo o alvo de regime.
 |---|---|---|
 | RNF-05 — p95 no gateway ≤ 500 ms com 10, 50 e 100 operadores, com escala automática | **atendido na configuração C** (249, 247 e 452 ms; 1 a 2 instâncias) e **parcialmente na A** (304 e 256 ms com 10 e 50; 1 834 ms com 100 por saturação do limite de 10 instâncias com uma requisição por vez). A escala automática foi observada nas duas (9 a 10 instâncias em A; 1 a 2 em C) | 2.1, 2.2, 2.3 |
 | RNF-06 — regime contínuo: p50 ≤ 200 ms e p95 ≤ 500 ms | **atendido**: função p50 136 ms e p95 250 ms (A-10); p50 115 ms e p95 161 ms (C-10) | 2.1, 2.2 |
-| RNF-06 / CE-18 — cold start ≤ 1,5 s | **não atendido**: primeira requisição após 20 min de inatividade com mediana de 6,0 s (`min_instancias` 0) e 6,2 s (`min_instancias` 1). A função responde por 1,5 a 2,7 s e 1,6 a 1,9 s; os 3 a 4,6 s restantes são a partida do API Gateway, gerenciado e sem instâncias mínimas; a instância mínima elimina a partida do contêiner, não o problema | 3 |
+| RNF-06 / CE-18 — cold start ≤ 1,5 s | **não atendido**: primeira requisição após 20 min de inatividade com mediana de 6,0 s (`min_instancias` 0) e 6,2 s (`min_instancias` 1). A função responde por 1,5 a 2,7 s e 1,6 a 1,9 s; os 3 a 4,6 s restantes são a partida do API Gateway, gerenciado e sem instâncias mínimas; a instância mínima elimina a partida do contêiner, não o problema. Pelo critério revisado no ADR-0016 (≤ 10 s de ponta a ponta, sem retentativa, com indicador de progresso), **atendido**: máximo 8,0 s | 3 |
 | Estabilidade da latência fim a fim conforme a carga cresce | em C o p95 no cliente foi de 387, 407 e 467 ms para 10, 50 e 100 operadores; em A, 379, 365 e 1 592 ms | 2.1, 2.2 |
 | Nenhuma requisição com erro sob carga | **atendido** em todas as seis execuções (41 295 requisições em regime) | evidências |
 
