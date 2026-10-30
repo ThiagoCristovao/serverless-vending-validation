@@ -141,6 +141,12 @@ função (`POST /interno/reconciliar-publicacoes`, fora do gateway, autenticado 
 conta de serviço do Scheduler). A função republica as validações cujo marcador de publicação está
 nulo há mais de 2 minutos e grava o marcador ao conseguir. Implementado na Sprint 5.
 
+**Aquecimento do gateway (ADR-0017).** Um segundo job do Cloud Scheduler chama `GET /v1/saude`
+pela URL pública do gateway a cada 5 minutos, sem autenticação: é a única operação pública do
+contrato, responde `200` sem tocar nas dependências e mantém aquecidos o gateway e a instância
+da função, que a reconciliação sozinha não cobria porque chama a função diretamente. Motivado
+pela medição de cold start da Sprint 10 (ADR-0016).
+
 **Consumidor (sistema central simulado, ADR-0013).** Módulo Go independente que conhece apenas o
 contrato dos eventos. Persiste cada evento novo em um arquivo JSON Lines e só então confirma
 (`ack`); duplicatas por `(idValidacao, tipo)` são reconhecidas mesmo após reinício e confirmadas
@@ -232,7 +238,7 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0016](adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0017](adr/0017-aquecimento-do-gateway-por-trafego-periodico.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:

@@ -255,6 +255,7 @@ make carga OPERADORES=10 CONFIGURACAO=C && make carga OPERADORES=50 CONFIGURACAO
 make infra-dev-apply                                  # volta à configuração A
 make carga-frio CONFIGURACAO=min0                     # ~2 h
 make infra-dev-apply TF_VAR_funcao_min_instancias=1 && make carga-frio CONFIGURACAO=min1 && make infra-dev-apply
+make carga-frio CONFIGURACAO=aquecido CARGA_ARGS="-agendador manter"   # uso normal, com o aquecimento do gateway (ADR-0017)
 ```
 
 Cada medição de cold start leva cerca de 2 h; convém rodá-la fora da sessão do terminal (por

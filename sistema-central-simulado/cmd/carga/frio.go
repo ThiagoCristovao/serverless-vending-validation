@@ -116,9 +116,9 @@ func (x *avaliacao) frio(ctx context.Context) error {
 				if e.Quando.After(m.quando.Add(90*time.Second)) || e.Metodo != "POST" {
 					continue
 				}
-				if m.funcaoFria == 0 {
+				if m.funcaoFria == 0 && eAbertura(e) {
 					m.funcaoFria = e.Latencia
-				} else if m.funcaoQ == 0 {
+				} else if m.funcaoQ == 0 && eConclusao(e) {
 					m.funcaoQ = e.Latencia
 				}
 			}
@@ -132,9 +132,9 @@ func (x *avaliacao) frio(ctx context.Context) error {
 				if e.Quando.After(m.quando.Add(90*time.Second)) || e.Metodo != "POST" {
 					continue
 				}
-				if m.gatewayFria == 0 {
+				if m.gatewayFria == 0 && eAbertura(e) {
 					m.gatewayFria, m.agenteFrio = e.Latencia, agenteDe(e)
-				} else if m.gatewayQ == 0 {
+				} else if m.gatewayQ == 0 && eConclusao(e) {
 					m.gatewayQ, m.agenteQ = e.Latencia, agenteDe(e)
 				}
 			}
@@ -179,3 +179,10 @@ func agenteDe(e laboratorio.EntradaLog) string {
 	}
 	return a
 }
+
+// eAbertura e eConclusao reconhecem, pelo caminho, a abertura (fria) e a
+// conclusão (quente) de uma amostra; o gateway pode registrar a mesma
+// requisição mais de uma vez (um agente por entrada), por isso a escolha
+// não é pela ordem.
+func eAbertura(e laboratorio.EntradaLog) bool  { return strings.HasSuffix(e.Caminho, "/v1/validacoes") }
+func eConclusao(e laboratorio.EntradaLog) bool { return strings.HasSuffix(e.Caminho, "/conclusao") }
