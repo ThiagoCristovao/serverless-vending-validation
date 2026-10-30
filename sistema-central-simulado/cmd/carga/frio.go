@@ -36,13 +36,15 @@ func (x *avaliacao) frio(ctx context.Context) error {
 	}()
 
 	type medida struct {
-		quando              time.Time
-		instanciasAntes     string
-		fria, quente        time.Duration
-		statusFrio          int
-		funcaoFria, funcaoQ time.Duration
-		partidas            int64
-		partidaMedia        float64
+		quando                                        time.Time
+		instanciasAntes                               string
+		fria, quente                                  time.Duration
+		statusFrio                                    int
+		funcaoFria, funcaoQ                           time.Duration
+		partidas                                      int64
+		partidaMedia                                  float64
+		gatewayTotal, gatewayBackend, gatewayOverhead float64
+		gatewayOk                                     bool
 	}
 	var medidas []medida
 	for i := 1; i <= x.amostras; i++ {
@@ -103,14 +105,25 @@ func (x *avaliacao) frio(ctx context.Context) error {
 			}
 		}
 		m.partidas, m.partidaMedia, _ = x.nuvem.PartidasFrias(ctx, x.cfg.NomeFuncao(), j)
+		// Máximo (p99) das métricas do gateway na janela da amostra: separa o que
+		// foi sobrecarga do próprio gateway do que foi espera pelo back-end.
+		if v, ok, err := x.nuvem.LatenciaGateway(ctx, x.cfg.Prefixo, "request_latencies", "", j, 99); err == nil && ok {
+			m.gatewayTotal, m.gatewayOk = v, true
+			m.gatewayBackend, _, _ = x.nuvem.LatenciaGateway(ctx, x.cfg.Prefixo, "request_latencies_backend", "", j, 99)
+			m.gatewayOverhead, _, _ = x.nuvem.LatenciaGateway(ctx, x.cfg.Prefixo, "request_latencies_overhead", "", j, 99)
+		}
 		if m.statusFrio == 201 {
 			frias = append(frias, m.fria)
 		}
+		gateway := "—"
+		if m.gatewayOk {
+			gateway = fmt.Sprintf("%.0f / %.0f / %.0f ms", m.gatewayTotal, m.gatewayBackend, m.gatewayOverhead)
+		}
 		linhas = append(linhas, []string{fmt.Sprint(i + 1), m.quando.Local().Format("15:04:05"), m.instanciasAntes,
 			fmt.Sprintf("%d em %s", m.statusFrio, laboratorio.Dur(m.fria)), laboratorio.Dur(m.quente),
-			laboratorio.Dur(m.funcaoFria), laboratorio.Dur(m.funcaoQ), fmt.Sprintf("%d (%.0f ms)", m.partidas, m.partidaMedia)})
+			laboratorio.Dur(m.funcaoFria), laboratorio.Dur(m.funcaoQ), fmt.Sprintf("%d (%.0f ms)", m.partidas, m.partidaMedia), gateway})
 	}
-	x.rel.Tabela("Amostras", []string{"#", "Hora", "Instâncias antes (minuto)", "1ª requisição (cliente)", "2ª requisição (cliente)", "1ª na função (log)", "2ª na função (log)", "Partidas de instância (média)"}, linhas)
+	x.rel.Tabela("Amostras", []string{"#", "Hora", "Instâncias antes (minuto)", "1ª requisição (cliente)", "2ª requisição (cliente)", "1ª na função (log)", "2ª na função (log)", "Partidas de instância (média)", "Gateway, máx. na janela: total / back-end / sobrecarga"}, linhas)
 
 	if len(frias) == 0 {
 		x.rel.Verificar(false, "nenhuma amostra válida de cold start")
