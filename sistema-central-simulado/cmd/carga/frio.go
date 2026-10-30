@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ThiagoCristovao/serverless-vending-validation/sistema-central-simulado/internal/laboratorio"
@@ -36,15 +37,15 @@ func (x *avaliacao) frio(ctx context.Context) error {
 	}()
 
 	type medida struct {
-		quando                                        time.Time
-		instanciasAntes                               string
-		fria, quente                                  time.Duration
-		statusFrio                                    int
-		funcaoFria, funcaoQ                           time.Duration
-		partidas                                      int64
-		partidaMedia                                  float64
-		gatewayTotal, gatewayBackend, gatewayOverhead float64
-		gatewayOk                                     bool
+		quando                time.Time
+		instanciasAntes       string
+		fria, quente          time.Duration
+		statusFrio            int
+		funcaoFria, funcaoQ   time.Duration
+		partidas              int64
+		partidaMedia          float64
+		gatewayFria, gatewayQ time.Duration
+		agenteFrio, agenteQ   string
 	}
 	var medidas []medida
 	for i := 1; i <= x.amostras; i++ {
@@ -105,25 +106,30 @@ func (x *avaliacao) frio(ctx context.Context) error {
 			}
 		}
 		m.partidas, m.partidaMedia, _ = x.nuvem.PartidasFrias(ctx, x.cfg.NomeFuncao(), j)
-		// Máximo (p99) das métricas do gateway na janela da amostra: separa o que
-		// foi sobrecarga do próprio gateway do que foi espera pelo back-end.
-		if v, ok, err := x.nuvem.LatenciaGateway(ctx, x.cfg.Prefixo, "request_latencies", "", j, 99); err == nil && ok {
-			m.gatewayTotal, m.gatewayOk = v, true
-			m.gatewayBackend, _, _ = x.nuvem.LatenciaGateway(ctx, x.cfg.Prefixo, "request_latencies_backend", "", j, 99)
-			m.gatewayOverhead, _, _ = x.nuvem.LatenciaGateway(ctx, x.cfg.Prefixo, "request_latencies_overhead", "", j, 99)
+		// Latência medida pelo próprio gateway (log de acesso) e o agente que
+		// atendeu: o que falta entre o cliente e este valor é a partida do
+		// gateway e a rede; o que falta entre este valor e a função é o gateway.
+		if entradas, err := x.nuvem.EntradasDoGateway(ctx, m.quando.Add(-5*time.Second), `httpRequest.requestUrl:"/v1/validacoes"`); err == nil {
+			for _, e := range entradas {
+				if e.Quando.After(m.quando.Add(90*time.Second)) || e.Metodo != "POST" {
+					continue
+				}
+				if m.gatewayFria == 0 {
+					m.gatewayFria, m.agenteFrio = e.Latencia, agenteDe(e)
+				} else if m.gatewayQ == 0 {
+					m.gatewayQ, m.agenteQ = e.Latencia, agenteDe(e)
+				}
+			}
 		}
 		if m.statusFrio == 201 {
 			frias = append(frias, m.fria)
 		}
-		gateway := "—"
-		if m.gatewayOk {
-			gateway = fmt.Sprintf("%.0f / %.0f / %.0f ms", m.gatewayTotal, m.gatewayBackend, m.gatewayOverhead)
-		}
 		linhas = append(linhas, []string{fmt.Sprint(i + 1), m.quando.Local().Format("15:04:05"), m.instanciasAntes,
 			fmt.Sprintf("%d em %s", m.statusFrio, laboratorio.Dur(m.fria)), laboratorio.Dur(m.quente),
-			laboratorio.Dur(m.funcaoFria), laboratorio.Dur(m.funcaoQ), fmt.Sprintf("%d (%.0f ms)", m.partidas, m.partidaMedia), gateway})
+			fmt.Sprintf("%s (%s)", laboratorio.Dur(m.gatewayFria), m.agenteFrio), fmt.Sprintf("%s (%s)", laboratorio.Dur(m.gatewayQ), m.agenteQ),
+			laboratorio.Dur(m.funcaoFria), laboratorio.Dur(m.funcaoQ), fmt.Sprintf("%d (%.0f ms)", m.partidas, m.partidaMedia)})
 	}
-	x.rel.Tabela("Amostras", []string{"#", "Hora", "Instâncias antes (minuto)", "1ª requisição (cliente)", "2ª requisição (cliente)", "1ª na função (log)", "2ª na função (log)", "Partidas de instância (média)", "Gateway, máx. na janela: total / back-end / sobrecarga"}, linhas)
+	x.rel.Tabela("Amostras", []string{"#", "Hora", "Instâncias antes (minuto)", "1ª requisição (cliente)", "2ª requisição (cliente)", "1ª no gateway (log, agente)", "2ª no gateway (log, agente)", "1ª na função (log)", "2ª na função (log)", "Partidas de instância (média)"}, linhas)
 
 	if len(frias) == 0 {
 		x.rel.Verificar(false, "nenhuma amostra válida de cold start")
@@ -144,4 +150,14 @@ func (x *avaliacao) frio(ctx context.Context) error {
 	}
 	x.rel.Verificar(acima == 0, "todas as primeiras requisições ≤ 1,5 s (%d de %d acima)", acima, len(frias))
 	return nil
+}
+
+// agenteDe resume o service_agent do log do gateway ("ESPv2/2.56.0" → "ESPv2",
+// "cloudesf_20261012_00_RC02" → "cloudesf").
+func agenteDe(e laboratorio.EntradaLog) string {
+	a := e.Campo("service_agent")
+	if i := strings.IndexAny(a, "/_"); i > 0 {
+		return a[:i]
+	}
+	return a
 }

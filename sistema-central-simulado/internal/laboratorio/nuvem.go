@@ -138,6 +138,18 @@ func (e EntradaLog) Rota() string {
 // instante que contenham o texto (busca livre do Logging).
 func (n *Nuvem) EntradasDaFuncao(ctx context.Context, nomeFuncao string, desde time.Time, texto string) ([]EntradaLog, error) {
 	filtro := fmt.Sprintf(`resource.type="cloud_run_revision" AND resource.labels.service_name="%s" AND timestamp>="%s"`, nomeFuncao, desde.UTC().Format(time.RFC3339))
+	return n.entradas(ctx, filtro, texto)
+}
+
+// EntradasDoGateway lista o log de acesso do API Gateway (endpoints_log) desde
+// um instante; a latência de cada entrada é a medida pelo próprio gateway e o
+// campo service_agent identifica o agente que atendeu (ESPv2 ou outro).
+func (n *Nuvem) EntradasDoGateway(ctx context.Context, desde time.Time, texto string) ([]EntradaLog, error) {
+	filtro := fmt.Sprintf(`resource.type="api" AND timestamp>="%s"`, desde.UTC().Format(time.RFC3339))
+	return n.entradas(ctx, filtro, texto)
+}
+
+func (n *Nuvem) entradas(ctx context.Context, filtro, texto string) ([]EntradaLog, error) {
 	if texto != "" {
 		filtro += fmt.Sprintf(` AND %s`, texto)
 	}

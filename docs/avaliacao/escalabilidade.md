@@ -15,7 +15,7 @@ qualitativa com a abordagem monolítica está em [analise-comparativa.md](analis
 | Carga | N operadores virtuais em laço fechado, cada um com conta própria no Firebase Authentication, documento em `operadores/` e máquina própria (`VM-CARGA-NNN`), repetindo o fluxo real: `POST /validacoes` (chave de idempotência nova) → `POST /validacoes/{id}/conclusao` → pausa de 1 s. Rampa de 30 s; 2 min em regime |
 | Medição no cliente | latência de cada requisição no gerador (no mesmo computador da Sprint 9, pela internet doméstica); média, p50, p95, p99, máximo, erros e vazão; linha do tempo em janelas de 10 s |
 | Medição no provedor | Cloud Monitoring: latência do gateway (`serviceruntime.googleapis.com/api/request_latencies`, total, parcela do back-end e sobrecarga), latência da função (`run.googleapis.com/request_latencies`), instâncias ativas por minuto, requisições e partidas de instância (`startup_latencies`) na janela do teste |
-| Cold start | cenário `frio`: o job de reconciliação do Cloud Scheduler é pausado (ele chama a função a cada 5 min e mantém uma instância aquecida); após 20 min de inatividade, uma validação (primeira requisição fria, conclusão quente); seis amostras; latência da função lida nos logs e partidas no Monitoring |
+| Cold start | cenário `frio`: o job de reconciliação do Cloud Scheduler é pausado (ele chama a função a cada 5 min e mantém uma instância aquecida); após 20 min de inatividade, uma validação (primeira requisição fria, conclusão quente); seis amostras; cada requisição medida no cliente, no gateway (log de acesso `endpoints_log`, com o agente que atendeu) e na função (log de requisição do Cloud Run); partidas de instância no Monitoring |
 | Ferramenta | `sistema-central-simulado/cmd/carga` (`make carga-preparar`, `make carga`, `make carga-frio`) |
 
 Configurações da função comparadas (variáveis `funcao_*` do Terraform, ADR-0015):
@@ -90,6 +90,56 @@ com dez vezes mais instâncias (e partidas) do que C. O RNF-05 é atendido em to
 configuração C e nas cargas de 10 e 50 operadores pela configuração A.
 
 ## 3. Cold start e regime contínuo
+
+Execuções de 30/10/2026 ([cold-start-min0.md](evidencias/cold-start-min0.md) e
+[cold-start-min1.md](evidencias/cold-start-min1.md)), configuração A com `min_instancias` 0 e 1.
+Cada amostra, após 20 min sem tráfego e com o job do Scheduler pausado, abre uma validação
+(1ª requisição, fria) e a conclui (2ª, quente). Cada requisição tem três medidas: no cliente
+(ida e volta pela internet), no gateway (latência cronometrada pelo próprio gateway no log de
+acesso `endpoints_log`, com o agente que atendeu) e na função (log de requisição do Cloud Run,
+que inclui a partida do contêiner). "Instâncias antes" é o `instance_count` do minuto anterior.
+
+### 3.1 `min_instancias` 0
+
+| Amostra | 1ª requisição: cliente / gateway (agente) / função | 2ª requisição: cliente / gateway (agente) / função |
+|---|---|---|
+| 1 | 4,995 s / 1,758 s (ESPv2) / 1,457 s | 5,802 s / 3,520 s (cloudesf) / 0,440 s |
+| 2 | 6,024 s / 2,807 s (ESPv2) / 2,526 s | 0,469 s / 0,323 s (ESPv2) / 0,304 s |
+| 3 | 5,752 s / 2,816 s (ESPv2) / 2,535 s | 4,741 s / 3,428 s (cloudesf) / 0,363 s |
+| 4 | 7,205 s / 5,962 s (cloudesf) / 2,654 s | 0,603 s / 0,424 s (cloudesf) / 0,391 s |
+| 5 | 7,262 s / 5,981 s (cloudesf) / 2,552 s | 0,761 s / 0,586 s (cloudesf) / 0,568 s |
+| 6 | 6,972 s / 5,852 s (cloudesf) / 2,478 s | 3,180 s / 0,303 s (ESPv2) / 0,278 s |
+
+Primeira requisição no cliente: mediana 6,0 s, média 6,4 s, máximo 7,3 s. Instâncias antes: 0 em
+todas as amostras; uma partida de contêiner por amostra (302 a 681 ms). **Critério não atendido**
+(alvo ≤ 1,5 s).
+
+**Onde o tempo fica.** Decompondo cada requisição fria:
+
+- **Função: 1,5 a 2,7 s** (25 % a 45 % do total). É a partida do contêiner (0,3 a 0,7 s) mais a
+  montagem preguiçosa das dependências na primeira requisição, com 1/6 de vCPU: clientes do
+  Firestore e do Pub/Sub, token de acesso do servidor de metadados, chaves públicas para validar o
+  ID token do Firebase e a primeira publicação no tópico. Na segunda requisição a função responde em
+  0,28 a 0,57 s.
+- **Gateway: 3,0 a 3,5 s**, a maior parcela, e ela aparece de duas formas conforme o agente que
+  atendeu. Com o ESPv2 (amostras 1 a 3) o gateway cronometrou só 0,3 s além da função; os outros
+  2,9 a 3,2 s ficam **antes** de ele começar a contar, isto é, na partida da própria instância do
+  gateway, um serviço gerenciado sem instâncias mínimas configuráveis. Com o agente `cloudesf`
+  (amostras 4 a 6), 3,1 a 3,3 s ficam **dentro** da medição do gateway (gateway menos função) e
+  1,1 a 1,3 s antes dela.
+- **Rede: 0,15 a 0,2 s** (cliente menos gateway nas requisições quentes das amostras 2, 4 e 5).
+
+A segunda requisição, com a função já quente (0,28 a 0,44 s), ainda levou 3,2 a 5,8 s em três das
+seis amostras (1, 3 e 6): foi atendida por **outra instância do gateway**, com agente diferente
+do da primeira e também fria. Dois agentes se alternaram no mesmo dia (`ESPv2/2.56.0` e
+`cloudesf_20261012_00_RC02`), sinal de uma migração interna do produto gerenciado, fora do
+controle do projeto.
+
+### 3.2 `min_instancias` 1
+
+*(a preencher ao término da execução iniciada em 30/10 às 11:34)*
+
+### 3.3 Cold start e regime contínuo
 
 *(a preencher)*
 
