@@ -28,7 +28,7 @@ medidas neste trabalho.
 | **Resiliência a falhas de dependências** | uma falha no banco ou na rede do data center derruba todo o fluxo | falhas parciais têm comportamento definido: Pub/Sub indisponível não impede a resposta (publicação pendente e reconciliada, ADR-0012); Firestore indisponível devolve `503` rápido e o reenvio idempotente recupera | resiliência, cenários B e C |
 | **Resiliência no dispositivo** | depende de como o cliente foi escrito; em geral uma chamada síncrona sem política de reenvio | política explícita: reenvios com a mesma chave de idempotência, consulta antes de reenviar a conclusão, distinção entre "sem conexão" e "autenticação indisponível" | resiliência, cenários D1–D4 e E1–E3; ADR-0009 |
 | **Escalabilidade** | limitada pela capacidade instalada; picos exigem superprovisionamento | instâncias sobem com a demanda até o limite configurado; a concorrência por instância e o limite são decisões explícitas com custo e latência mensuráveis | escalabilidade, configurações A e C com 10, 50 e 100 operadores |
-| **Latência** | previsível em regime (processo sempre quente), mas sujeita a filas quando saturado | em regime depende da configuração da instância; a primeira requisição após inatividade paga o cold start, mitigável por instância mínima ou por tráfego periódico | escalabilidade, seções de regime e de cold start |
+| **Latência** | previsível em regime (processo sempre quente), mas sujeita a filas quando saturado | em regime depende da configuração da instância; a primeira requisição após inatividade paga o cold start, que a medição atribuiu sobretudo ao gateway; instância mínima na função não basta, tráfego periódico pelo gateway é o caminho | escalabilidade, seções de regime e de cold start |
 | **Consistência** | forte, em um único banco transacional | forte dentro do serviço (transações do Firestore: uma validação aberta por máquina, idempotência por chave); eventual entre o serviço e o central (eventos) | modelo de dados; ADR-0009; cenário A (eventos retidos) |
 | **Segurança** | perímetro do data center; autenticação própria | autenticação delegada ao Firebase, JWT validado no gateway antes da função, função não invocável publicamente, menor privilégio por conta de serviço, nenhum acesso direto do aplicativo ao banco | RNF-07 a RNF-11 |
 | **Observabilidade** | a ser construída (logs, métricas, alertas) | fornecida pela plataforma: logs estruturados, métricas de latência, instâncias, backlog e DLQ, painel e alertas em Terraform | módulo `observabilidade`; evidências das Sprints 9 e 10 coletadas por API |
@@ -49,7 +49,8 @@ medidas neste trabalho.
 - **Resposta antes da publicação (ADR-0012).** A validação responde ao operador assim que
   persiste, mesmo que o Pub/Sub esteja indisponível; a reconciliação pelo Scheduler republica o
   que ficou pendente. O custo é mais um componente e um atraso de até 5 min na pior hipótese;
-  um efeito colateral útil é manter a função aquecida, o que reduz o cold start em uso normal.
+  um efeito colateral útil é manter a função aquecida, embora o gateway, chamado só pelo
+  aplicativo, não se beneficie (Sprint 10, seção 3 do relatório de escalabilidade).
 - **Idempotência por chave do cliente (ADR-0009).** Transforma reenvios em operações seguras e
   dá ao aplicativo uma política de retentativa simples. Exige persistir e indexar a chave, e o
   cenário D4 mostrou que a política precisa cobrir também a conclusão.
@@ -58,9 +59,12 @@ medidas neste trabalho.
   plataforma (uma requisição por instância, 1/6 de vCPU) favorece custo baixo e isolamento, e
   limita a vazão; a configuração concorrente (80 por instância, 1 vCPU) usa melhor cada instância
   em Go, à custa de instâncias maiores. A avaliação de escalabilidade mede os dois lados.
-- **Cold start.** Inerente ao modelo com piso zero; Go reduz a partida, o tráfego periódico do
-  Scheduler a esconde e `min_instancias = 1` a elimina com custo fixo pequeno. A escolha é de
-  operação, não de código.
+- **Cold start.** Inerente ao modelo com piso zero e, na medição da Sprint 10, dominado pelo
+  API Gateway (3 a 4,6 s de uma primeira requisição de 6 s), não pela função (1,5 a 2,7 s):
+  `min_instancias = 1` elimina a partida do contêiner, mas não a do gateway nem a penalidade de
+  ociosidade da própria instância (1,6 a 1,9 s). Esconder o cold start exige tráfego periódico que
+  atravesse o gateway, ou dispensar o gateway; a escolha é de operação e custo, não de código
+  ([escalabilidade.md](escalabilidade.md), seção 3).
 - **Dependência do provedor.** O ecossistema usa cinco serviços gerenciados; trocar de nuvem
   significaria reimplementar adaptadores, não o domínio. É um custo aceito em troca de operação
   mínima para uma equipe pequena.

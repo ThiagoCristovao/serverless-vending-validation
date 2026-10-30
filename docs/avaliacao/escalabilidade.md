@@ -137,11 +137,59 @@ controle do projeto.
 
 ### 3.2 `min_instancias` 1
 
-*(a preencher ao término da execução iniciada em 30/10 às 11:34)*
+| Amostra | 1ª requisição: cliente / gateway (agente) / função | 2ª requisição: cliente / gateway (agente) / função |
+|---|---|---|
+| 1 | 8,040 s / 6,631 s (cloudesf) / 3,557 s | 0,505 s / 0,366 s (cloudesf) / 0,353 s |
+| 2 | 6,182 s / 4,665 s (cloudesf) / 1,608 s | 0,580 s / 0,423 s (cloudesf) / 0,396 s |
+| 3 | 5,132 s / 1,871 s (ESPv2) / 1,828 s | 4,619 s / 3,484 s (cloudesf) / 0,392 s |
+| 4 | 6,070 s / 4,728 s (cloudesf) / 1,639 s | 0,471 s / 0,329 s (cloudesf) / 0,316 s |
+| 5 | 6,389 s / 4,927 s (cloudesf) / 1,877 s | 3,398 s / 0,379 s (ESPv2) / 0,357 s |
+| 6 | 6,362 s / 4,955 s (cloudesf) / 1,864 s | 3,462 s / 0,362 s (ESPv2) / 0,323 s |
+
+Primeira requisição no cliente: mediana 6,2 s, média 6,4 s, máximo 8,0 s. Instâncias antes: 1 em
+todas as amostras; nenhuma partida de contêiner. **Critério não atendido** (alvo ≤ 1,5 s).
+
+O que a instância mínima mudou:
+
+- **A função deixou de partir, mas não ficou rápida.** O log do Cloud Run mostra a mesma instância
+  nas seis amostras e a mensagem "serviço montado" só na primeira (3,56 s), quando a instância
+  recém-criada pela implantação montou as dependências. Nas cinco seguintes a instância já estava
+  montada e, mesmo assim, a primeira requisição levou 1,6 a 1,9 s, contra 0,32 a 0,40 s da
+  segunda: uma penalidade de ociosidade de 1,3 a 1,5 s em uma instância "quente". A causa provável
+  é o restabelecimento das conexões ociosas (canais gRPC do Firestore e do Pub/Sub, token de
+  acesso, chaves públicas do ID token) com 1/6 de vCPU e CPU alocada só durante requisições;
+  confirmar exigiria rastreamento (Cloud Trace), fora do escopo.
+- **O gateway não mudou.** 3,0 a 3,3 s com o ESPv2 (antes de ele cronometrar) e 4,4 a 4,6 s com
+  o `cloudesf` (3,05 a 3,1 s dentro da medição mais 1,3 a 1,5 s antes dela). Três segundas
+  requisições (amostras 3, 5 e 6) voltaram a cair em outra instância fria do gateway.
+
+No cliente a mediana ficou igual (6,0 s → 6,2 s): a instância mínima reduziu a parcela da função
+de cerca de 2,5 s para 1,8 s e não toca na parcela dominante.
 
 ### 3.3 Cold start e regime contínuo
 
-*(a preencher)*
+| Medida | Regime contínuo (A-10, seção 2.1) | Primeira requisição após 20 min de inatividade |
+|---|---|---|
+| Cliente | p95 379 ms | mediana 6,0 s (`min_instancias` 0) e 6,2 s (`min_instancias` 1) |
+| Gateway | p95 304 ms | 3,0 a 4,6 s por requisição fria, em qualquer das duas configurações |
+| Função | p50 136 ms, p95 250 ms | 1,5 a 2,7 s (`min_instancias` 0); 1,6 a 1,9 s (`min_instancias` 1) |
+
+A primeira requisição após inatividade custa cerca de vinte vezes o p95 do gateway em regime.
+O alvo do RNF-06 (≤ 1,5 s) foi escrito supondo que a função fosse o único componente a partir a
+frio (CE-18, "cold start da função"); a medição mostra que o API Gateway, serviço gerenciado sem
+instâncias mínimas configuráveis, responde pela parcela maior e fora do controle do projeto.
+Mesmo a parcela da função só caberia no alvo se a instância, além de existir, mantivesse suas
+conexões ativas.
+
+Em uso normal o job do Scheduler mantém a função aquecida (uma instância sempre alocada nas 24 h
+observadas no Monitoring), mas não o gateway, porque chama a função diretamente: a primeira
+validação de um operador depois de um intervalo sem uso da frota pagaria a partida do gateway, e
+o aplicativo a cobre com o indicador de progresso (CE-18). Três caminhos de mitigação ficam para
+decisão de operação, a registrar em ADR próprio: tráfego periódico que atravesse o gateway (o
+próprio job do Scheduler chamando uma rota leve pela URL pública, custo desprezível), chamada
+direta do aplicativo ao serviço Cloud Run com validação do token na função (dispensa a partida do
+gateway e o contrato OpenAPI imposto por ele) ou revisão do alvo do RNF-06 para a primeira
+requisição após inatividade, mantendo o alvo de regime.
 
 ## 4. Síntese por requisito
 
@@ -149,7 +197,7 @@ controle do projeto.
 |---|---|---|
 | RNF-05 — p95 no gateway ≤ 500 ms com 10, 50 e 100 operadores, com escala automática | **atendido na configuração C** (249, 247 e 452 ms; 1 a 2 instâncias) e **parcialmente na A** (304 e 256 ms com 10 e 50; 1 834 ms com 100 por saturação do limite de 10 instâncias com uma requisição por vez). A escala automática foi observada nas duas (9 a 10 instâncias em A; 1 a 2 em C) | 2.1, 2.2, 2.3 |
 | RNF-06 — regime contínuo: p50 ≤ 200 ms e p95 ≤ 500 ms | **atendido**: função p50 136 ms e p95 250 ms (A-10); p50 115 ms e p95 161 ms (C-10) | 2.1, 2.2 |
-| RNF-06 / CE-18 — cold start ≤ 1,5 s | *(seção 3, a preencher)* | 3 |
+| RNF-06 / CE-18 — cold start ≤ 1,5 s | **não atendido**: primeira requisição após 20 min de inatividade com mediana de 6,0 s (`min_instancias` 0) e 6,2 s (`min_instancias` 1). A função responde por 1,5 a 2,7 s e 1,6 a 1,9 s; os 3 a 4,6 s restantes são a partida do API Gateway, gerenciado e sem instâncias mínimas; a instância mínima elimina a partida do contêiner, não o problema | 3 |
 | Estabilidade da latência fim a fim conforme a carga cresce | em C o p95 no cliente foi de 387, 407 e 467 ms para 10, 50 e 100 operadores; em A, 379, 365 e 1 592 ms | 2.1, 2.2 |
 | Nenhuma requisição com erro sob carga | **atendido** em todas as seis execuções (41 295 requisições em regime) | evidências |
 
@@ -171,6 +219,19 @@ controle do projeto.
 - **Partidas de instância durante a carga são curtas.** As partidas registradas pelo Monitoring
   durante as cargas tiveram média de 49 a 444 ms (`startup_latencies` mede o contêiner, não a
   primeira requisição); a seção 3 mede a primeira requisição fria de ponta a ponta.
+- **O cold start medido é do gateway, não da função.** Dos 6 s da primeira requisição após
+  inatividade, 3 a 4,6 s ficam na partida da instância do API Gateway, que o projeto não
+  configura; `min_instancias = 1` na função não muda a mediana. O log de acesso do gateway
+  (`endpoints_log`) foi decisivo para a atribuição: a latência que ele cronometra, comparada com a
+  do cliente e com a do Cloud Run, separa as três parcelas. O máximo da métrica
+  `api/request_latencies` não serve para isso, porque devolve limites de faixa do histograma.
+- **Instância mínima não é instância quente.** Com a instância mantida e já montada, a primeira
+  requisição após 20 min ainda levou 1,6 a 1,9 s, cinco vezes a segunda. Manter uma instância
+  alocada evita a partida do contêiner; manter conexões e CPU ativas exige tráfego.
+- **O produto gerenciado muda sob os pés.** Dois agentes do gateway (`ESPv2/2.56.0` e
+  `cloudesf_20261012_00_RC02`) se alternaram no mesmo dia, com perfis de partida diferentes, e
+  metade das segundas requisições caiu em uma instância fria do gateway mesmo com a função quente.
+  Medições de cold start em serviços gerenciados precisam registrar quem atendeu.
 - **Métricas do provedor chegam com atraso.** As do Cloud Run levam 3 a 4 min para ficar
   disponíveis, as do gateway cerca de 2; a ferramenta espera 4 min antes de consultá-las, e
   a contagem de requisições da função na janela ainda pode vir incompleta.
@@ -192,3 +253,7 @@ make infra-dev-apply                                  # volta à configuração 
 make carga-frio CONFIGURACAO=min0                     # ~2 h
 make infra-dev-apply TF_VAR_funcao_min_instancias=1 && make carga-frio CONFIGURACAO=min1 && make infra-dev-apply
 ```
+
+Cada medição de cold start leva cerca de 2 h; convém rodá-la fora da sessão do terminal (por
+exemplo, com `systemd-run --user`), porque a ferramenta retoma o job do Scheduler ao terminar e
+um cancelamento no meio exige retomá-lo manualmente.

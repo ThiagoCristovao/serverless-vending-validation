@@ -70,6 +70,10 @@ todo e torna o cold start raro em uso normal.
   duas horas; aceitável no ambiente de desenvolvimento.
 - Custo: algumas centenas de requisições por minuto por alguns minutos; dentro do orçamento do
   projeto.
+- Resultado (30/10/2026): a primeira requisição após 20 min de inatividade levou 6 s, dominada
+  pela partida do API Gateway (3 a 4,6 s); `min_instancias = 1` não atende o RNF-06. A mitigação
+  (tráfego periódico pelo gateway, chamada direta ao Cloud Run ou revisão do alvo) é decisão
+  separada, a registrar em ADR próprio.
 
 ## Referências
 

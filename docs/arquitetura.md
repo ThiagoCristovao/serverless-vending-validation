@@ -188,7 +188,7 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
 | CE-15 | Sistema central indisponível | Pub/Sub | Mensagens retidas; retentativa com espera; ao voltar, consumo em ordem por máquina, sem perda | Nenhum | Sprint 9 |
 | CE-16 | Mensagem falha repetidamente no consumidor | Pub/Sub | Após 5 tentativas vai à DLQ; alerta; as demais mensagens seguem | Nenhum | Sprint 8 |
 | CE-17 | Mensagem duplicada (at-least-once) | Consumidor | Reconhecida por `(idValidacao, tipo)` e ignorada | Nenhum | Sprint 8 |
-| CE-18 | Cold start da função | Função | Latência adicional dentro do alvo (RNF-06); Go reduz; `min_instance_count = 1` avaliado como alternativa | Indicador de progresso | Sprint 10 |
+| CE-18 | Cold start (gateway e função) | Gateway, Função | Medido na Sprint 10: 6 s na primeira requisição após 20 min de inatividade, dos quais 3 a 4,6 s na partida do API Gateway; `min_instance_count = 1` não resolve; mitigação a decidir em ADR ([avaliacao/escalabilidade.md](avaliacao/escalabilidade.md), seção 3) | Indicador de progresso | Sprint 10 |
 | CE-19 | Permissão de câmera negada | App | Tela explicativa com atalho para as configurações do sistema | "Precisamos da câmera para ler o código" | Sprint 6 |
 | CE-20 | Operador conclui sem programar o novo código (`codigoRotacionado = false`) | Função | Contador não incrementa; próxima validação devolve os mesmos códigos; evento registra o fato | Aviso de que o código atual continua valendo | Sprint 4 |
 | CE-21 | Medidor informado menor que o da última validação | Função | Aceita a conclusão e registra o aviso `medidor_menor_que_anterior` na resposta e no evento (RN-07, ADR-0011) | Aviso visível na tela de conclusão | Sprint 4 |
