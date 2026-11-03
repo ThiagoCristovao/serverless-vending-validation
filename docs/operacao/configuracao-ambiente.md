@@ -215,13 +215,15 @@ make infra-dev-apply TF_VAR_funcao_concorrencia=80 TF_VAR_funcao_cpu=1 TF_VAR_fu
 make carga OPERADORES=10 CONFIGURACAO=C  # e 50, 100; depois make infra-dev-apply sem as variáveis para voltar à configuração A
 make carga-frio CONFIGURACAO=min0        # ~2 h: pausa o agendador, 6 amostras após 20 min de inatividade, retoma o agendador
 make infra-dev-apply TF_VAR_funcao_min_instancias=1 && make carga-frio CONFIGURACAO=min1 && make infra-dev-apply
+make carga-frio CONFIGURACAO=aquecido CARGA_ARGS="-agendador manter"   # uso normal: jobs de reconciliação e de aquecimento ativos (ADR-0017)
 ```
 
 Os relatórios vão para `docs/avaliacao/evidencias/carga-<conf>-<n>.md` e
 `cold-start-<conf>.md`; a consolidação está em `docs/avaliacao/escalabilidade.md`. As variáveis
 `TF_VAR_*` são lidas pelo Terraform e não ficam em arquivo; a configuração padrão volta ao
-aplicar sem elas. Se um `carga-frio` for interrompido, retome o job
-`svv-dev-reconciliar-publicacoes` no Cloud Scheduler.
+aplicar sem elas. Se um `carga-frio` for interrompido, retome os jobs
+`svv-dev-reconciliar-publicacoes` e `svv-dev-aquecer-gateway` no Cloud Scheduler (a ferramenta
+pausa os dois, salvo com `-agendador manter`).
 
 ## 8. Custos
 

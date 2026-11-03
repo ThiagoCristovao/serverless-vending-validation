@@ -54,3 +54,28 @@ resource "google_api_gateway_gateway" "gateway" {
   api_config   = google_api_gateway_api_config.config.id
   display_name = "Gateway ${var.prefixo}"
 }
+
+# Aquecimento do gateway (ADR-0017): uma chamada leve e pública a cada poucos
+# minutos mantém a instância do gateway, e a da função atrás dele, fora do
+# estado frio. O job de reconciliação (módulo funcao) chama a função
+# diretamente e não atravessa o gateway.
+resource "google_cloud_scheduler_job" "aquecimento" {
+  count = var.aquecimento_cron == null ? 0 : 1
+
+  name             = "${var.prefixo}-aquecer-gateway"
+  project          = var.projeto_id
+  region           = var.regiao
+  description      = "Chama GET /v1/saude pelo gateway para mantê-lo aquecido (ADR-0017)."
+  schedule         = var.aquecimento_cron
+  time_zone        = "Etc/UTC"
+  attempt_deadline = "30s"
+
+  retry_config {
+    retry_count = 0
+  }
+
+  http_target {
+    uri         = "https://${google_api_gateway_gateway.gateway.default_hostname}/v1/saude"
+    http_method = "GET"
+  }
+}

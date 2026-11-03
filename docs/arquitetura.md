@@ -141,6 +141,13 @@ função (`POST /interno/reconciliar-publicacoes`, fora do gateway, autenticado 
 conta de serviço do Scheduler). A função republica as validações cujo marcador de publicação está
 nulo há mais de 2 minutos e grava o marcador ao conseguir. Implementado na Sprint 5.
 
+**Aquecimento do gateway (ADR-0017).** Um segundo job do Cloud Scheduler chama `GET /v1/saude`
+pela URL pública do gateway a cada 5 minutos, sem autenticação: é a única operação pública do
+contrato, responde `200` sem tocar nas dependências e mantém aquecidos o gateway e a instância
+da função, que a reconciliação sozinha não cobria porque chama a função diretamente. Motivado
+pela medição de cold start da Sprint 10 (ADR-0016); com ele, a primeira requisição após 20 min de
+inatividade caiu de 6 s para 1,2 s de mediana (máximo 2,2 s).
+
 **Consumidor (sistema central simulado, ADR-0013).** Módulo Go independente que conhece apenas o
 contrato dos eventos. Persiste cada evento novo em um arquivo JSON Lines e só então confirma
 (`ack`); duplicatas por `(idValidacao, tipo)` são reconhecidas mesmo após reinício e confirmadas
@@ -188,7 +195,7 @@ cliente. Detalhes em [modelo-dados.md](modelo-dados.md).
 | CE-15 | Sistema central indisponível | Pub/Sub | Mensagens retidas; retentativa com espera; ao voltar, consumo em ordem por máquina, sem perda | Nenhum | Sprint 9 |
 | CE-16 | Mensagem falha repetidamente no consumidor | Pub/Sub | Após 5 tentativas vai à DLQ; alerta; as demais mensagens seguem | Nenhum | Sprint 8 |
 | CE-17 | Mensagem duplicada (at-least-once) | Consumidor | Reconhecida por `(idValidacao, tipo)` e ignorada | Nenhum | Sprint 8 |
-| CE-18 | Cold start (gateway e função) | Gateway, Função | Medido na Sprint 10: 6 s na primeira requisição após 20 min de inatividade, dos quais 3 a 4,6 s na partida do API Gateway; `min_instance_count = 1` não resolve; alvo revisado e mitigação adiada no [ADR-0016](adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md) ([avaliacao/escalabilidade.md](avaliacao/escalabilidade.md), seção 3) | Indicador de progresso | Sprint 10 |
+| CE-18 | Cold start (gateway e função) | Gateway, Função | Medido na Sprint 10: 6 s na primeira requisição após 20 min de inatividade, dos quais 3 a 4,6 s na partida do API Gateway; `min_instance_count = 1` não resolve; alvo revisado no [ADR-0016](adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md); com o aquecimento do gateway por tráfego periódico ([ADR-0017](adr/0017-aquecimento-do-gateway-por-trafego-periodico.md)) a primeira requisição caiu para 1,2 s de mediana (máximo 2,2 s), restando a penalidade de ociosidade da função ([avaliacao/escalabilidade.md](avaliacao/escalabilidade.md), seção 3) | Indicador de progresso | Sprint 10 |
 | CE-19 | Permissão de câmera negada | App | Tela explicativa com atalho para as configurações do sistema | "Precisamos da câmera para ler o código" | Sprint 6 |
 | CE-20 | Operador conclui sem programar o novo código (`codigoRotacionado = false`) | Função | Contador não incrementa; próxima validação devolve os mesmos códigos; evento registra o fato | Aviso de que o código atual continua valendo | Sprint 4 |
 | CE-21 | Medidor informado menor que o da última validação | Função | Aceita a conclusão e registra o aviso `medidor_menor_que_anterior` na resposta e no evento (RN-07, ADR-0011) | Aviso visível na tela de conclusão | Sprint 4 |
@@ -232,7 +239,7 @@ todo estado de erro tem uma ação (tentar novamente, reler QR, entrar novamente
 
 ## 13. Decisões e pendências
 
-Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0016](adr/0016-cold-start-alvo-revisado-e-mitigacao-futura.md).
+Decisões: [ADR-0001](adr/0001-monorepo.md) a [ADR-0017](adr/0017-aquecimento-do-gateway-por-trafego-periodico.md).
 O ADR-0002 (contrassenha e QR) foi validado com o orientador em 2026-09-23.
 
 Pendências para validar com o orientador:

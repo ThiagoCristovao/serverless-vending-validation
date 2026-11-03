@@ -62,7 +62,8 @@ make e2e                   # suíte e2e contra svv-dev (~5 min); E2E_ARGS=-short
 make experimento CENARIO=central-indisponivel   # Sprint 9; também publicacao-indisponivel, firestore-indisponivel, restaurar
 make carga-preparar OPERADORES=100              # Sprint 10, uma vez: contas e máquinas de carga
 make carga OPERADORES=50 CONFIGURACAO=A         # teste de carga (relatório em docs/avaliacao/evidencias)
-make carga-frio CONFIGURACAO=min0               # cold start após inatividade (~2 h)
+make carga-frio CONFIGURACAO=min0               # cold start após inatividade (~2 h), com os jobs do Scheduler pausados
+make carga-frio CONFIGURACAO=aquecido CARGA_ARGS="-agendador manter"   # idem, com o aquecimento do gateway ativo (ADR-0017)
 ```
 
 Variáveis do comando (`SVV_CENTRAL_PROJETO`, `SVV_CENTRAL_ASSINATURA`, `SVV_CENTRAL_ARQUIVO`,

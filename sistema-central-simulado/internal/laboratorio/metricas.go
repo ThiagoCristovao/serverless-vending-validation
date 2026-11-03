@@ -2,10 +2,12 @@ package laboratorio
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"google.golang.org/api/cloudscheduler/v1"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/monitoring/v3"
 )
 
@@ -136,6 +138,9 @@ func (n *Nuvem) PartidasFrias(ctx context.Context, nomeFuncao string, j Janela) 
 
 // --- Cloud Scheduler -------------------------------------------------------------
 
+// ErrJobInexistente indica que o job do Cloud Scheduler não existe no projeto.
+var ErrJobInexistente = errors.New("job do Cloud Scheduler inexistente")
+
 // PausarAgendamento pausa um job do Cloud Scheduler (ex.: a reconciliação, que
 // mantém a função aquecida a cada 5 min) e devolve a função que o retoma.
 func (n *Nuvem) PausarAgendamento(ctx context.Context, regiao, job string) (func(context.Context) error, error) {
@@ -145,6 +150,10 @@ func (n *Nuvem) PausarAgendamento(ctx context.Context, regiao, job string) (func
 	}
 	nome := fmt.Sprintf("projects/%s/locations/%s/jobs/%s", n.projeto, regiao, job)
 	if _, err := svc.Projects.Locations.Jobs.Pause(nome, &cloudscheduler.PauseJobRequest{}).Context(ctx).Do(); err != nil {
+		var ge *googleapi.Error
+		if errors.As(err, &ge) && ge.Code == 404 {
+			return nil, ErrJobInexistente
+		}
 		return nil, fmt.Errorf("pausar %s: %w", job, err)
 	}
 	return func(ctx context.Context) error {

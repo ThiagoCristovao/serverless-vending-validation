@@ -136,7 +136,7 @@ carga-preparar: ## Cria OPERADORES=100 operadores virtuais (Firebase Auth) e má
 carga: ## Teste de carga com OPERADORES=10|50|100 operadores e CONFIGURACAO=A|C, relatório em docs/avaliacao/evidencias/carga-<conf>-<n>.md (CARGA_ARGS="-duracao 2m -rampa 30s -pausa 1s")
 	cd sistema-central-simulado && $(CARGA_AMBIENTE) go run ./cmd/carga -cenario carga -operadores "$(OPERADORES)" -configuracao "$(CONFIGURACAO)" -saida "$(CURDIR)/docs/avaliacao/evidencias/carga-$(CONFIGURACAO)-$(OPERADORES).md" $(CARGA_ARGS)
 
-carga-frio: ## Cold start após inatividade (pausa o agendador; ~2 h) com CONFIGURACAO=min0|min1, relatório em docs/avaliacao/evidencias/cold-start-<conf>.md
+carga-frio: ## Cold start após inatividade (~2 h) com CONFIGURACAO=min0|min1|aquecido; pausa o job de reconciliação, salvo CARGA_ARGS="-agendador manter"; relatório em docs/avaliacao/evidencias/cold-start-<conf>.md
 	cd sistema-central-simulado && $(E2E_AMBIENTE) go run ./cmd/carga -cenario frio -configuracao "$(CONFIGURACAO)" -saida "$(CURDIR)/docs/avaliacao/evidencias/cold-start-$(CONFIGURACAO).md" $(CARGA_ARGS)
 
 injecao-formatar-verificar: ## Falha se houver Go das ferramentas de injeção de falhas fora do padrão gofmt

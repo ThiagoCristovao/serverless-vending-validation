@@ -33,3 +33,9 @@ variable "caminho_base_backend" {
   description = "Sufixo acrescentado à URL da função no x-google-backend. Vazio quando o gateway já repassa o prefixo /v1 do contrato."
   default     = ""
 }
+
+variable "aquecimento_cron" {
+  type        = string
+  description = "Cron do job do Cloud Scheduler que chama GET /v1/saude pelo gateway para mantê-lo aquecido (ADR-0017). null desabilita o job."
+  default     = null
+}

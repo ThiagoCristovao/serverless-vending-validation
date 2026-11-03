@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -12,7 +13,9 @@ import (
 
 // frio mede a primeira requisição após um período de inatividade da função.
 // Como o Cloud Scheduler chama a reconciliação a cada 5 min e mantém uma
-// instância aquecida, o job é pausado durante a medição e retomado ao final.
+// instância aquecida, o job é pausado durante a medição e retomado ao final;
+// com -agendador manter, nada é pausado e a medição reflete o uso normal, com
+// o job de aquecimento do gateway ativo (ADR-0017).
 func (x *avaliacao) frio(ctx context.Context) error {
 	x.rel.Parametro("projeto", x.cfg.Projeto)
 	x.rel.Parametro("gateway", x.cfg.Gateway)
@@ -20,21 +23,36 @@ func (x *avaliacao) frio(ctx context.Context) error {
 	x.rel.Parametro("amostras", x.amostras)
 	x.rel.Parametro("inatividade antes de cada amostra", x.inatividade)
 	x.rel.Parametro("máquina", x.cfg.MaquinaA)
-	job := x.cfg.Prefixo + "-reconciliar-publicacoes"
-	x.rel.Parametro("agendador pausado", job)
-
-	retomar, err := x.nuvem.PausarAgendamento(ctx, x.cfg.Regiao, job)
-	if err != nil {
-		return err
-	}
-	x.rel.Evento("job %s pausado", job)
-	defer func() {
-		if err := retomar(context.Background()); err != nil {
-			x.rel.Verificar(false, "retomar o job %s: %v (retome manualmente)", job, err)
-		} else {
-			x.rel.Evento("job %s retomado", job)
+	switch x.agendador {
+	case "manter":
+		x.rel.Parametro("agendador", "jobs mantidos (reconciliação e aquecimento do gateway ativos)")
+		x.rel.Evento("jobs do Scheduler mantidos durante a medição")
+	case "pausar":
+		// Reconciliação (mantém a função aquecida) e aquecimento do gateway
+		// (ADR-0017), quando existir.
+		var pausados []string
+		for _, job := range []string{x.cfg.Prefixo + "-reconciliar-publicacoes", x.cfg.Prefixo + "-aquecer-gateway"} {
+			retomar, err := x.nuvem.PausarAgendamento(ctx, x.cfg.Regiao, job)
+			if errors.Is(err, laboratorio.ErrJobInexistente) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			pausados = append(pausados, job)
+			x.rel.Evento("job %s pausado", job)
+			defer func(job string) {
+				if err := retomar(context.Background()); err != nil {
+					x.rel.Verificar(false, "retomar o job %s: %v (retome manualmente)", job, err)
+				} else {
+					x.rel.Evento("job %s retomado", job)
+				}
+			}(job)
 		}
-	}()
+		x.rel.Parametro("agendador pausado", strings.Join(pausados, ", "))
+	default:
+		return fmt.Errorf("-agendador deve ser pausar ou manter, não %q", x.agendador)
+	}
 
 	type medida struct {
 		quando                time.Time
@@ -98,9 +116,9 @@ func (x *avaliacao) frio(ctx context.Context) error {
 				if e.Quando.After(m.quando.Add(90*time.Second)) || e.Metodo != "POST" {
 					continue
 				}
-				if m.funcaoFria == 0 {
+				if m.funcaoFria == 0 && eAbertura(e) {
 					m.funcaoFria = e.Latencia
-				} else if m.funcaoQ == 0 {
+				} else if m.funcaoQ == 0 && eConclusao(e) {
 					m.funcaoQ = e.Latencia
 				}
 			}
@@ -114,9 +132,9 @@ func (x *avaliacao) frio(ctx context.Context) error {
 				if e.Quando.After(m.quando.Add(90*time.Second)) || e.Metodo != "POST" {
 					continue
 				}
-				if m.gatewayFria == 0 {
+				if m.gatewayFria == 0 && eAbertura(e) {
 					m.gatewayFria, m.agenteFrio = e.Latencia, agenteDe(e)
-				} else if m.gatewayQ == 0 {
+				} else if m.gatewayQ == 0 && eConclusao(e) {
 					m.gatewayQ, m.agenteQ = e.Latencia, agenteDe(e)
 				}
 			}
@@ -161,3 +179,10 @@ func agenteDe(e laboratorio.EntradaLog) string {
 	}
 	return a
 }
+
+// eAbertura e eConclusao reconhecem, pelo caminho, a abertura (fria) e a
+// conclusão (quente) de uma amostra; o gateway pode registrar a mesma
+// requisição mais de uma vez (um agente por entrada), por isso a escolha
+// não é pela ordem.
+func eAbertura(e laboratorio.EntradaLog) bool  { return strings.HasSuffix(e.Caminho, "/v1/validacoes") }
+func eConclusao(e laboratorio.EntradaLog) bool { return strings.HasSuffix(e.Caminho, "/conclusao") }

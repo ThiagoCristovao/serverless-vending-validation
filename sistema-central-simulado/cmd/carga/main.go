@@ -36,6 +36,7 @@ type avaliacao struct {
 	pausa        time.Duration
 	amostras     int
 	inatividade  time.Duration
+	agendador    string
 	lote         string
 	senha        string
 }
@@ -50,6 +51,7 @@ func main() {
 		pausa       = flag.Duration("pausa", time.Second, "pausa de cada operador entre uma validação e a seguinte")
 		amostras    = flag.Int("amostras", 6, "amostras de cold start (frio)")
 		inatividade = flag.Duration("inatividade", 20*time.Minute, "inatividade antes de cada amostra de cold start")
+		agendador   = flag.String("agendador", "pausar", "frio: pausar o job de reconciliação durante a medição (padrão) ou manter todos os jobs do Scheduler (mede com o aquecimento ativo)")
 		saida       = flag.String("saida", "", "arquivo Markdown do relatório (padrão: stdout)")
 	)
 	flag.Parse()
@@ -66,7 +68,7 @@ func main() {
 	}
 	x := &avaliacao{
 		cfg: cfg, configuracao: *conf, operadores: *n, duracao: *dur, rampa: *rampa, pausa: *pausa,
-		amostras: *amostras, inatividade: *inatividade,
+		amostras: *amostras, inatividade: *inatividade, agendador: *agendador,
 		lote: os.Getenv("SVV_CARGA_LOTE"), senha: os.Getenv("SVV_CARGA_SENHA"),
 	}
 	if x.nuvem, err = laboratorio.NovaNuvem(ctx, cfg.Projeto, nil); err != nil {

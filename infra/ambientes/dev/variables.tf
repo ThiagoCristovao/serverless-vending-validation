@@ -44,6 +44,12 @@ variable "funcao_cpu" {
   default     = "0.1666"
 }
 
+variable "gateway_aquecimento_cron" {
+  type        = string
+  description = "Cron do job que chama GET /v1/saude pelo gateway para mantê-lo aquecido (ADR-0017). null desabilita; usado só para medir o cold start sem aquecimento."
+  default     = "*/5 * * * *"
+}
+
 variable "gateway_caminho_base_backend" {
   type        = string
   description = "Sufixo acrescentado à URL da função no roteamento do gateway (ver módulo gateway)."

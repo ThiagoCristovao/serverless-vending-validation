@@ -11,6 +11,9 @@
   `x-google-api-management.backends.funcao` (endereço, `jwtAudience`, `pathTranslation`) e
   referenciado por `x-google-backend: funcao`, forma exigida em OpenAPI 3.x.
 - `google_api_gateway_gateway` — `svv-<amb>-gateway`, região `us-east1`.
+- `google_cloud_scheduler_job` — `svv-<amb>-aquecer-gateway` (provider `google`): `GET /v1/saude` pelo
+  gateway no cron `aquecimento_cron` (padrão do dev: a cada 5 min), para manter o gateway e a
+  função aquecidos (ADR-0017); `null` desabilita.
 
 **Verificação do JWT** (esquema de segurança `firebaseJwt` no contrato, forma OpenAPI 3.x):
 `type: oauth2` com fluxo implícito e a extensão `x-google-auth` (`issuer =
@@ -18,7 +21,8 @@ https://securetoken.google.com/<PROJETO_ID>`, `jwksUri = .../securetoken@system.
 `audiences = [<PROJETO_ID>]`). As claims chegam à função no cabeçalho `X-Apigateway-Api-Userinfo`,
 com o payload do JWT em base64url.
 
-**Entradas previstas.** `projeto_id`, `regiao`, `prefixo`, URL da função, conta de serviço.
+**Entradas previstas.** `projeto_id`, `regiao`, `prefixo`, URL da função, conta de serviço,
+`aquecimento_cron`.
 
 **Saídas previstas.** `hostname` do gateway (base do `servers[0].url` do contrato).
 

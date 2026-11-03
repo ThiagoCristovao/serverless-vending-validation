@@ -7,7 +7,7 @@ info:
     Contrato canônico do serviço de validação (ADR-0006). Usado para documentação, geração de
     código do servidor (Go) e do cliente (Dart) e como configuração do API Gateway.
 
-    **Autenticação.** Todas as operações exigem um ID token do Firebase Authentication no cabeçalho
+    **Autenticação.** Todas as operações, exceto `GET /v1/saude`, exigem um ID token do Firebase Authentication no cabeçalho
     `Authorization: Bearer <jwt>`. O API Gateway valida assinatura, emissor e audiência e encaminha
     as claims à função no cabeçalho `X-Apigateway-Api-Userinfo`. Requisições sem token válido recebem
     `401` do gateway, sem chegar ao serviço.
@@ -38,6 +38,8 @@ servers:
 tags:
   - name: validacoes
     description: Ciclo de vida de uma validação, da leitura do QR à conclusão da visita.
+  - name: operacao
+    description: Operações de apoio à operação do serviço, sem dados de negócio.
 
 security:
   - firebaseJwt: []
@@ -55,6 +57,31 @@ x-google-api-management:
 x-google-backend: funcao
 
 paths:
+  /v1/saude:
+    get:
+      tags: [operacao]
+      operationId: verificarSaude
+      summary: Verificação de saúde pública, usada pelo job de aquecimento do gateway
+      description: |
+        Responde `200` sem tocar nas dependências e sem devolver dados. É a única operação sem
+        autenticação: o Cloud Scheduler a chama a cada poucos minutos pelo gateway para manter o
+        gateway e a função aquecidos (ADR-0017).
+      security: []
+      responses:
+        '200':
+          description: Serviço no ar.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+              example:
+                status: ok
+
   /v1/validacoes:
     post:
       tags: [validacoes]
