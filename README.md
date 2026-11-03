@@ -47,7 +47,9 @@ com evidências em [docs/avaliacao/resiliencia.md](docs/avaliacao/resiliencia.md
 (escalabilidade e consolidação: cargas com 10, 50 e 100 operadores em duas configurações da
 função, cold start após inatividade e análise comparativa, com evidências em
 [docs/avaliacao/escalabilidade.md](docs/avaliacao/escalabilidade.md) e
-[docs/avaliacao/analise-comparativa.md](docs/avaliacao/analise-comparativa.md)). O
+[docs/avaliacao/analise-comparativa.md](docs/avaliacao/analise-comparativa.md)). Após a
+Sprint 10, o [ADR-0017](docs/adr/0017-aquecimento-do-gateway-por-trafego-periodico.md) aplicou o aquecimento do gateway por tráfego
+periódico, que levou a primeira requisição após inatividade de 6 s para 1,2 s de mediana. O
 planejamento completo está em
 [docs/planejamento-sprints.md](docs/planejamento-sprints.md); as decisões tomadas, em
 [docs/adr](docs/adr).

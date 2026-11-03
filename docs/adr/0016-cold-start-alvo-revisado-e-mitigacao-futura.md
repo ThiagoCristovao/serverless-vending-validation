@@ -3,6 +3,10 @@
 - **Status:** aceita
 - **Data:** 2026-10-30
 - **Sprint:** 10
+- **Atualização (2026-11-03):** a mitigação preferida (item 3) foi aplicada pelo
+  [ADR-0017](0017-aquecimento-do-gateway-por-trafego-periodico.md): a primeira requisição após inatividade caiu de 6,0 s para 1,21 s de
+  mediana (máximo 2,19 s) e a meta de 1,5 s passou a ser atendida pela mediana. O critério de
+  aceitação deste ADR permanece.
 
 ## Contexto
 
