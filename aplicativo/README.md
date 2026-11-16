@@ -56,6 +56,7 @@ make app-verificar              # format, analyze, test
 make app-apk                    # build/app/outputs/flutter-apk/app-debug.apk
 adb devices                     # celular com depuração USB autorizada
 make app-executar               # fvm flutter run no dispositivo
+make app-icones                 # ícones do launcher e logo do login a partir de assets/logo/logo.svg
 ```
 
 Para testar a leitura sem máquina: gere um adesivo com `servico/cmd/gerar-qr` (ou use

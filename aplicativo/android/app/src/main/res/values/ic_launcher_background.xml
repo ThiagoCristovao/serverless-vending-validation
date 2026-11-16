@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gerado por ferramentas/gerar_icones.py: fundo do ícone adaptativo (fundo das telas). -->
+<resources>
+    <color name="ic_launcher_background">#101418</color>
+</resources>

@@ -52,10 +52,10 @@ class _TelaEntrarState extends ConsumerState<TelaEntrar> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(
-                      Icons.qr_code_scanner,
-                      size: 64,
-                      color: Theme.of(context).colorScheme.primary,
+                    Image.asset(
+                      'assets/logo/logo.png',
+                      height: 64,
+                      excludeFromSemantics: true,
                     ),
                     const SizedBox(height: 16),
                     Text(

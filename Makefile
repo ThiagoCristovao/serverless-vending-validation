@@ -33,7 +33,7 @@ endif
 .PHONY: ajuda configurar verificar infra-formatar infra-formatar-verificar infra-validar api-lint \
         servico-formatar servico-formatar-verificar servico-verificar servico-cobertura \
         servico-integracao servico-local emuladores-subir emuladores-parar \
-        app-analisar app-testar app-verificar app-apk app-executar \
+        app-analisar app-testar app-verificar app-apk app-executar app-icones \
         central-formatar central-formatar-verificar central-verificar central-executar e2e-preparar e2e \
         experimento injecao-formatar-verificar injecao-verificar injecao-proxy injecao-dns app-apk-injecao \
         infra-bootstrap-init infra-bootstrap-plan infra-bootstrap-apply infra-bootstrap-salvar-estado \
@@ -197,3 +197,6 @@ app-apk: ## Compila o APK de depuração (build/app/outputs/flutter-apk/app-debu
 
 app-executar: ## Instala e executa no dispositivo Android conectado (adb devices)
 	cd aplicativo && fvm flutter run
+
+app-icones: ## Regenera os ícones do launcher Android e a logo do login a partir de aplicativo/assets/logo/logo.svg
+	python3 aplicativo/ferramentas/gerar_icones.py
